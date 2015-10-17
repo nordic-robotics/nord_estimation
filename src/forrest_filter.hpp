@@ -14,37 +14,6 @@ public:
     float theta = 0;
 };
 
-class point
-{
-public:
-    point(float x, float y, float z)
-        : x(x), y(y), z(z) { };
-    point() { };
-
-    void normalize()
-    {
-        auto d = std::sqrt(x * x + y * y + z * z);
-        x /= d;
-        y /= d;
-        z /= d;
-    }
-
-    float x = 0;
-    float y = 0;
-    float z = 0;
-};
-
-class ray
-{
-public:
-    ray(const point& origin, const point& target)
-        : origin(origin), target(target) { };
-    ray() { };
-
-    point origin;
-    point target;
-};
-
 class observation
 {
 public:
