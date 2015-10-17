@@ -2,13 +2,14 @@
 
 #include "point.hpp"
 
+template<unsigned int d>
 class ray
 {
 public:
-    ray(const point& origin, const point& target)
+    ray(const point<d>& origin, const point<d>& target)
         : origin(origin), target(target) { };
     ray() { };
 
-    point origin;
-    point target;
+    point<d> origin;
+    point<d> target;
 };
