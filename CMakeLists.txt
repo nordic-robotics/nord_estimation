@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(nord_estimation)
-set(CMAKE_CXX_FLAGS "--std=c++11 ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "--std=c++14 ${CMAKE_CXX_FLAGS}")
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -131,7 +131,7 @@ include_directories(
 
 ## Declare a C++ executable
 # add_executable(nord_estimation_node src/nord_estimation_node.cpp)
-add_executable(particle_filter src/particle_filter.cpp src/forrest_filter.cpp)
+add_executable(particle_filter src/particle_filter.cpp src/forrest_filter.cpp src/map.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
