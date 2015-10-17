@@ -131,7 +131,7 @@ include_directories(
 
 ## Declare a C++ executable
 # add_executable(nord_estimation_node src/nord_estimation_node.cpp)
-add_executable(particle_filter src/particle_filter.cpp)
+add_executable(particle_filter src/particle_filter.cpp src/forrest_filter.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above

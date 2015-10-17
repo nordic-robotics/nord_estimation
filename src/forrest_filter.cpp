@@ -1,16 +1,14 @@
-#pragma once
-
-#include <cmath>
 #include "forrest_filter.hpp"
+#include <cmath>
 
-static constexpr float forrest_filter::square(float n)
+constexpr float forrest_filter::square(float n)
 {
     return n * n;
 }
 
 // wrap an angle to [-pi, pi]
 // assumes the angle is not more than 2pi away from that range
-static float forrest_filter::wrap(float angle)
+float forrest_filter::wrap(float angle)
 {
     if (angle < -M_PI)
     {
@@ -44,8 +42,8 @@ float forrest_filter::prob(float a, float b2) const
     return numerator / denominator;
 }
 
-std::pair<float, pose> forrest_filter::motion(const pose& state,
-                                         const observation& obs) const override
+std::pair<float, pose> forrest_filter::odometry(const pose& state,
+                                                const observation& obs) const
 {
     // common to both motion and probability
     auto delta_rot1 = std::atan2(obs.odometry.y - obs.odometry_prev.y,
@@ -89,7 +87,23 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
     return {p1 * p2 * p3, next};
 }
 
-pose forrest_filter::uniform() const override
+float forrest_filter::rangefinder(const pose& state, const ray& r) const
+{
+    return 1;
+}
+
+std::pair<float, pose> forrest_filter::motion(const pose& state,
+                                              const observation& obs) const
+{
+    auto next = odometry(state, obs);
+    for (auto& r : obs.ranges)
+    {
+        next.first *= rangefinder(state, r);
+    }
+    return next;
+}
+
+pose forrest_filter::uniform() const
 {
     return pose();
 }

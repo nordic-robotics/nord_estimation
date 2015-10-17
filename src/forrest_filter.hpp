@@ -49,14 +49,14 @@ class observation
 {
 public:
     observation(const pose& odometry, const pose& odometry_prev,
-                const std::array<ray, 6>& range)
+                const std::array<ray, 6>& ranges)
         : odometry(odometry), odometry_prev(odometry_prev),
-          range(range) { };
+          ranges(ranges) { };
     observation() { };
 
     pose odometry;
     pose odometry_prev;
-    std::array<ray, 6> range;
+    std::array<ray, 6> ranges;
 };
 
 class forrest_filter : public dust::filter<pose, observation>
@@ -94,6 +94,10 @@ private:
 
     // moves a particle forward based on an observation, returns { probability, new_state }
     std::pair<float, pose> motion(const pose& state, const observation& obs) const override;
+
+    // helper functions for motion and probability
+    std::pair<float, pose> odometry(const pose& state, const observation& obs) const;
+    float rangefinder(const pose& state, const ray& r) const;
 
     // creates a random particle
     pose uniform() const override;
