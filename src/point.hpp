@@ -22,6 +22,16 @@ public:
     float z() const { static_assert(d >= 3, "z requires d >= 3"); return data[2]; };
     float w() const { static_assert(d >= 4, "w requires d >= 4"); return data[3]; };
 
+    float length()
+    {
+        float l = 0;
+        for (auto& datum : data)
+        {
+            l += datum * datum;
+        }
+        return std::sqrt(l);
+    }
+
     friend point<d> operator*(const point& p, float other)
     {
         point<d> output;
@@ -50,6 +60,13 @@ public:
         point<d> output = p;
         for (uint i = 0; i < d; i++)
             output[i] -= other;
+        return output;
+    }
+    friend point operator-(const point& lhs, const point& rhs)
+    {
+        point output = lhs;
+        for (uint i = 0; i < d; i++)
+            output[i] -= rhs[i];
         return output;
     }
 
