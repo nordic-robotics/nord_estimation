@@ -16,13 +16,12 @@ public:
         : data{x, y} { static_assert(d == 2, "xyz constructor only exists in 3d"); };
 
     float operator[](uint i) const { return data[i]; }
-    float& operator[](uint i) { return data[i]; }
     float x() const { static_assert(d >= 1, "x requires d >= 1"); return data[0]; };
     float y() const { static_assert(d >= 2, "y requires d >= 2"); return data[1]; };
     float z() const { static_assert(d >= 3, "z requires d >= 3"); return data[2]; };
     float w() const { static_assert(d >= 4, "w requires d >= 4"); return data[3]; };
 
-    float length()
+    float length() const
     {
         float l = 0;
         for (auto& datum : data)
@@ -96,6 +95,8 @@ public:
     }
 
 private:
+    float& operator[](uint i) { return data[i]; }
+
     std::array<float, d> data;
 };
 
