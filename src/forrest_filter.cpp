@@ -87,7 +87,7 @@ std::pair<float, pose> forrest_filter::odometry(const pose& state,
     return {p1 * p2 * p3, next};
 }
 
-float forrest_filter::rangefinder(const pose& state, const ray<2>& r) const
+float forrest_filter::rangefinder(const pose& state, const line<2>& r) const
 {
     return 1;
 }

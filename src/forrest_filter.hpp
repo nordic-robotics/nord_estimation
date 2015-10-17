@@ -1,7 +1,7 @@
 #pragma once
 
 #include "filter.hpp"
-#include "ray.hpp"
+#include "line.hpp"
 
 class pose
 {
@@ -19,14 +19,14 @@ class observation
 {
 public:
     observation(const pose& odometry, const pose& odometry_prev,
-                const std::array<ray<2>, 6>& ranges)
+                const std::array<line<2>, 6>& ranges)
         : odometry(odometry), odometry_prev(odometry_prev),
           ranges(ranges) { };
     observation() { };
 
     pose odometry;
     pose odometry_prev;
-    std::array<ray<2>, 6> ranges;
+    std::array<line<2>, 6> ranges;
 };
 
 class forrest_filter : public dust::filter<pose, observation>
@@ -67,7 +67,7 @@ private:
 
     // helper functions for motion and probability
     std::pair<float, pose> odometry(const pose& state, const observation& obs) const;
-    float rangefinder(const pose& state, const ray<2>& r) const;
+    float rangefinder(const pose& state, const line<2>& r) const;
 
     // creates a random particle
     pose uniform() const override;
