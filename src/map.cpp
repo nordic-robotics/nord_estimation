@@ -39,3 +39,11 @@ opt_point<2> map::raycast(line<2> ray) const
 
     return closest;
 }
+
+bool map::contains(point<2> p) const
+{
+    return p.x >= min_x
+        && p.x <= max_x
+        && p.y >= min_y
+        && p.y <= max_y;
+}

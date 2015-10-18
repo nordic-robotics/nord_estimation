@@ -33,18 +33,14 @@ class forrest_filter : public dust::filter<pose, observation>
 {
 public:
     forrest_filter(float alpha_1, float alpha_2, float alpha_3, float alpha_4,
-                   float min_x, float min_y, float max_x, float max_y,
                    unsigned int num_particles, const pose& init)
         : alpha_1(alpha_1), alpha_2(alpha_2), alpha_3(alpha_3), alpha_4(alpha_4),
-          min_x(min_x), min_y(min_y), max_x(max_x), max_y(max_y),
           filter(num_particles, init)
     {
     }
     forrest_filter(float alpha_1, float alpha_2, float alpha_3, float alpha_4,
-               float min_x, float min_y, float max_x, float max_y,
                unsigned int num_particles)
         : alpha_1(alpha_1), alpha_2(alpha_2), alpha_3(alpha_3), alpha_4(alpha_4),
-          min_x(min_x), min_y(min_y), max_x(max_x), max_y(max_y),
           filter(num_particles)
     {
     }
@@ -77,9 +73,4 @@ private:
     float alpha_2;
     float alpha_3;
     float alpha_4;
-    // map parameters
-    float min_x;
-    float min_y;
-    float max_x;
-    float max_y;
 };
