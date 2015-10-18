@@ -10,6 +10,11 @@ public:
         : start(start), end(end) { };
     line() { };
 
+    float length() const
+    {
+        return (end - start).length();
+    }
+
     point<d> start;
     point<d> end;
 };

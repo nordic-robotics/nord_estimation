@@ -31,6 +31,17 @@ public:
         return std::sqrt(l);
     }
 
+    point<d> normalized() const
+    {
+        auto l = length();
+        point<d> output;
+        for (size_t i = 0; i < data.size(); i++)
+        {
+            output[i] = data[i] / l;
+        }
+        return output;
+    }
+
     friend point<d> operator*(const point& p, float other)
     {
         point<d> output;

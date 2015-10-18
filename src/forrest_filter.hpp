@@ -2,6 +2,7 @@
 
 #include "filter.hpp"
 #include "line.hpp"
+#include "map.hpp"
 
 class pose
 {
@@ -19,58 +20,70 @@ class observation
 {
 public:
     observation(const pose& odometry, const pose& odometry_prev,
-                const std::array<line<2>, 6>& ranges)
+                const std::array<line<2>, 6>& ir)
         : odometry(odometry), odometry_prev(odometry_prev),
-          ranges(ranges) { };
+          ir(ir) { };
     observation() { };
 
     pose odometry;
     pose odometry_prev;
-    std::array<line<2>, 6> ranges;
+    std::array<line<2>, 6> ir;
+};
+
+class range_settings
+{
+public:
+    range_settings(float z_max, float sigma_hit, float lambda_short,
+                   float z_p_hit, float z_p_short, float z_p_max, float z_p_rand)
+        : z_max(z_max), sigma_hit(sigma_hit), lambda_short(lambda_short),
+          z_p_hit(z_p_hit), z_p_short(z_p_short),
+          z_p_max(z_p_max), z_p_rand(z_p_rand) { };
+    range_settings() { };
+
+    float z_max;
+    float sigma_hit;
+    float lambda_short;
+    float z_p_hit;
+    float z_p_short;
+    float z_p_max;
+    float z_p_rand;
 };
 
 class forrest_filter : public dust::filter<pose, observation>
 {
 public:
-    forrest_filter(float alpha_1, float alpha_2, float alpha_3, float alpha_4,
-                   unsigned int num_particles, const pose& init)
-        : alpha_1(alpha_1), alpha_2(alpha_2), alpha_3(alpha_3), alpha_4(alpha_4),
-          filter(num_particles, init)
+    forrest_filter(const std::array<float, 4>& alpha,
+                   const std::array<range_settings, 6>& ir_theta,
+                   unsigned int num_particles, map* maze, const pose& init)
+        : alpha(alpha), ir_theta(ir_theta), maze(maze), filter(num_particles, init)
     {
     }
-    forrest_filter(float alpha_1, float alpha_2, float alpha_3, float alpha_4,
-               unsigned int num_particles)
-        : alpha_1(alpha_1), alpha_2(alpha_2), alpha_3(alpha_3), alpha_4(alpha_4),
-          filter(num_particles)
+    forrest_filter(const std::array<float, 4>& alpha,
+                   const std::array<range_settings, 6>& ir_theta,
+                   unsigned int num_particles, map* maze)
+        : alpha(alpha), ir_theta(ir_theta), maze(maze), filter(num_particles)
     {
     }
 
 private:
-    static constexpr float square(float n);
-
-    // wrap an angle to [-pi, pi]
-    // assumes the angle is not more than 2pi away from that range
-    static float wrap(float angle);
-
+public:
     // sample from normal distribution with zero mean and b^2 variance
     float sample(float b2) const;
-
-    // probability of the value 'a' given a zero mean and b^2 variance
-    float prob(float a, float b2) const;
 
     // moves a particle forward based on an observation, returns { probability, new_state }
     std::pair<float, pose> motion(const pose& state, const observation& obs) const override;
 
     // helper functions for motion and probability
     std::pair<float, pose> odometry(const pose& state, const observation& obs) const;
-    float rangefinder(const pose& state, const line<2>& r) const;
+    float rangefinder(const line<2>& r, const range_settings& theta) const;
 
     // creates a random particle
     pose uniform() const override;
 
+    map* maze;
+
     // odometry parameters
-    float alpha_1;
-    float alpha_2;
-    float alpha_3;
-    float alpha_4;
+    std::array<float, 4> alpha;
+    // IR parameters
+    std::array<range_settings, 6> ir_theta;
 };
