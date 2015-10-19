@@ -5,20 +5,21 @@
 
 namespace aggregate
 {
-    template<class T, class MSG>
+    template<class T, class MSG, class T2 = T>
     class aggregator : public std::vector<T>
     {
         using MSGPtr = typename MSG::ConstPtr;
     public:
         aggregator(ros::NodeHandle& n, const std::string& topic,
-                   std::function<T(const MSGPtr&)> convert, unsigned int queue = 10)
+                   std::function<T(const MSGPtr&)> convert, T identity = T(),
+                   unsigned int queue = 10)
             : sub(n.subscribe<MSG>(topic, queue,
                                    [&, convert](const MSGPtr& m) {
                                        readings.push_back(convert(m));
                                    }))
         { };
 
-        T aggregate()
+        T2 aggregate()
         {
             if (has_new())
             {
@@ -27,7 +28,7 @@ namespace aggregate
             return latest_aggregate;
         }
 
-        virtual T aggregate_impl() = 0;
+        virtual T2 aggregate_impl() = 0;
 
         bool has_new()
         {
@@ -36,7 +37,8 @@ namespace aggregate
 
     protected:
         std::vector<T> readings;
-        T latest_aggregate = T();
+        T2 latest_aggregate = T2();
+        T identity;
 
     private:
         ros::Subscriber sub;
@@ -48,10 +50,11 @@ namespace aggregate
     public:
         using aggregator<T, MSG>::aggregator;
         using aggregator<T, MSG>::readings;
+        using aggregator<T, MSG>::identity;
 
         T aggregate_impl() override
         {
-            auto result = std::accumulate(readings.begin(), readings.end(), T(0));
+            auto result = std::accumulate(readings.begin(), readings.end(), identity);
             readings.clear();
             return result;
         }
@@ -63,10 +66,11 @@ namespace aggregate
     public:
         using aggregator<T, MSG>::aggregator;
         using aggregator<T, MSG>::readings;
+        using aggregator<T, MSG>::identity;
 
         T aggregate_impl() override
         {
-            auto result = std::accumulate(readings.begin(), readings.end(), T(1),
+            auto result = std::accumulate(readings.begin(), readings.end(), identity,
                                           std::multiplies<T>());
             readings.clear();
             return result;
@@ -79,10 +83,11 @@ namespace aggregate
     public:
         using aggregator<T, MSG>::aggregator;
         using aggregator<T, MSG>::readings;
+        using aggregator<T, MSG>::identity;
 
         T aggregate_impl() override
         {
-            auto result = std::accumulate(readings.begin(), readings.end(), T(0));
+            auto result = std::accumulate(readings.begin(), readings.end(), identity);
             result /= readings.size();
             readings.clear();
             return result;
@@ -95,6 +100,7 @@ namespace aggregate
     public:
         using aggregator<T, MSG>::aggregator;
         using aggregator<T, MSG>::readings;
+        using aggregator<T, MSG>::identity;
 
         T aggregate_impl() override
         {
