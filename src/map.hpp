@@ -19,6 +19,7 @@ public:
 
     opt_point<2> raycast(line<2> ray) const;
     bool contains(point<2> p) const;
+    const std::vector<line<2>>& get_walls() const;
 
 private:
     std::vector<line<2>> walls;

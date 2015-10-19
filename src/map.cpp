@@ -47,3 +47,8 @@ bool map::contains(point<2> p) const
         && p.y() >= min_y
         && p.y() <= max_y;
 }
+
+const std::vector<line<2>>& map::get_walls() const
+{
+    return walls;
+}
