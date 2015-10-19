@@ -109,4 +109,29 @@ namespace aggregate
             return result;
         }
     };
+
+    template<class T, class MSG, class T2 = T>
+    class custom : public aggregator<T, MSG, T2>
+    {
+        using MSGPtr = typename MSG::ConstPtr;
+    public:
+        using aggregator<T, MSG, T2>::readings;
+
+        custom(ros::NodeHandle& n, const std::string& topic,
+               std::function<T(const MSGPtr&)> convert,
+               std::function<T2(const std::vector<T>&)> aggregate_func,
+               unsigned int queue = 10)
+            : aggregate_func(aggregate_func),
+              aggregator<T, MSG, T2>(n, topic, convert, T(), queue) { };
+
+        T2 aggregate_impl() override
+        {
+            auto result = aggregate_func(readings);
+            readings.clear();
+            return result;
+        }
+
+    private:
+        std::function<T2(const std::vector<T>&)> aggregate_func;
+    };
 }
