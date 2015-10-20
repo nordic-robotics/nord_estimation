@@ -150,7 +150,7 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
     auto next = odometry(state, obs);
     for (size_t i = 0; i < obs.ir.size(); i++)
     {
-        next.first *= rangefinder(obs.ir[i], ir_theta[i]);
+        next.first *= rangefinder(obs.ir[i].rotated(next.second.theta), ir_theta[i]);
     }
     return next;
 }
