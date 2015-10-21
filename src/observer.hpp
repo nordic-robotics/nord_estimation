@@ -7,12 +7,34 @@
 #include "aggregator.hpp"
 #include <valarray>
 
+class observer_settings
+{
+public:
+    observer_settings(const point<2>& ir_front, const point<2>& ir_back,
+                      const point<2>& ir_left_front, const point<2>& ir_left_back,
+                      const point<2>& ir_right_front, const point<2>& ir_right_back,
+                      float wheel_r, float wheel_b)
+        : ir_front(ir_front), ir_back(ir_back),
+          ir_left_front(ir_left_front), ir_left_back(ir_left_back),
+          ir_right_front(ir_right_front), ir_right_back(ir_right_back),
+          wheel_r(wheel_r), wheel_b(wheel_b) { };
+
+    point<2> ir_front;
+    point<2> ir_back;
+    point<2> ir_left_front;
+    point<2> ir_left_back;
+    point<2> ir_right_front;
+    point<2> ir_right_back;
+    float wheel_r;
+    float wheel_b;
+};
+
 class observer
 {
     using Encoders = ras_arduino_msgs::Encoders;
     using Pose2D = geometry_msgs::Pose2D;
 public:
-    observer(ros::NodeHandle& n)
+    observer(ros::NodeHandle& n, const observer_settings& settings)
         : pub(n.advertise<geometry_msgs::Pose2D>("/nord/estimation/particle_filter", 10)),
           encoders(n, "/arduino/encoders",
                    [](const Encoders::ConstPtr& e) {
