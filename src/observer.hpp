@@ -83,6 +83,12 @@ public:
                         })
     { };
 
+    bool all_new()
+    {
+        return encoders.has_new()
+            && ir_sensors.has_new();
+    }
+
     ros::Publisher pub;
 
     aggregate::custom<std::valarray<float>, Encoders, pose> encoders;
