@@ -2,6 +2,7 @@
 #include "ros/package.h"
 #include "std_msgs/Float32.h"
 #include "visualization_msgs/Marker.h"
+#include "geometry_msgs/Pose2D.h"
 #include "map.hpp"
 #include "forrest_filter.hpp"
 #include "observer.hpp"
@@ -36,6 +37,8 @@ map read_map(std::string filename)
 
 int main(int argc, char** argv)
 {
+    using geometry_msgs::Pose2D;
+
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
     map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
@@ -48,6 +51,8 @@ int main(int argc, char** argv)
                                     point<2>(), point<2>(),
                                     0.049675f, 0.2015f));
 
+    ros::Publisher guess_pub = n.advertise<Pose2D>("/nord/estimation/largest_weight", 10);
+
     pose odometry_prev;
     ros::Rate r(10);
     while (ros::ok())
@@ -59,6 +64,11 @@ int main(int argc, char** argv)
         filter.update(obs);
 
         auto guess = filter.estimate_largest_weight();
+        Pose2D p;
+        p.x = guess.second.x;
+        p.y = guess.second.y;
+        p.theta = guess.second.theta;
+        guess_pub.publish(p);
 
         r.sleep();
     }
