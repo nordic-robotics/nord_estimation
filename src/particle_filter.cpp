@@ -43,7 +43,7 @@ visualization_msgs::Marker create_map_message(const map& maze)
     line_list.color.a = line_list.color.r = line_list.color.g = line_list.color.b = 1.0;
     line_list.header.frame_id = "/map";
     line_list.header.stamp = ros::Time::now();
-    line_list.ns = "particle_filter";
+    line_list.ns = "pf_map";
     line_list.action = visualization_msgs::Marker::ADD;
     line_list.pose.orientation.w = 1.0;
     line_list.lifetime = ros::Duration();
@@ -76,7 +76,7 @@ visualization_msgs::Marker create_point_message(const std::vector<point<2>>& poi
     point_list.color.b = b;
     point_list.header.frame_id = "/map";
     point_list.header.stamp = ros::Time::now();
-    point_list.ns = "particle_filter";
+    point_list.ns = "pf_particles";
     point_list.action = visualization_msgs::Marker::ADD;
     point_list.pose.orientation.w = 1.0;
     point_list.lifetime = ros::Duration();
@@ -92,6 +92,32 @@ visualization_msgs::Marker create_point_message(const std::vector<point<2>>& poi
     }
 
     return point_list;
+}
+
+visualization_msgs::Marker create_pose_message(const pose& p)
+{
+    visualization_msgs::Marker arrow;
+    arrow.id = 3;
+    arrow.type = visualization_msgs::Marker::ARROW;
+    arrow.color.a = arrow.color.r = 1.0;
+    arrow.color.g = arrow.color.b = 0.0;
+    arrow.header.frame_id = "/map";
+    arrow.header.stamp = ros::Time::now();
+    arrow.ns = "pf_largest_weight";
+    arrow.action = visualization_msgs::Marker::ADD;
+    arrow.lifetime = ros::Duration();
+    arrow.scale.x = arrow.scale.y = arrow.scale.z = 0.01;
+
+    geometry_msgs::Point p0;
+    p0.x = p.x;
+    p0.y = p.y;
+
+    auto p1 = p0;
+    p1.x += std::cos(p.theta) * 0.1;
+    p1.y += std::sin(p.theta) * 0.1;
+    arrow.points.push_back(p0);
+    arrow.points.push_back(p1);
+    return arrow;
 }
 
 int main(int argc, char** argv)
