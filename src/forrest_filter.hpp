@@ -61,30 +61,21 @@ public:
           dist_theta(-M_PI, M_PI), filter(num_particles, init)
     {
     }
-    forrest_filter(const std::array<float, 4>& alpha,
-                   const std::array<range_settings, 6>& ir_theta,
-                   unsigned int num_particles, map& maze)
-        : alpha(alpha), ir_theta(ir_theta), maze(maze),
-          dist_x(maze.get_min_x(), maze.get_max_x()),
-          dist_y(maze.get_min_y(), maze.get_max_y()),
-          dist_theta(-M_PI, M_PI), filter(num_particles)
-    {
-    }
 
-private:
-public:
-    // sample from normal distribution with zero mean and b^2 variance
-    float sample(float b2) const;
-
+protected:
     // moves a particle forward based on an observation, returns { probability, new_state }
     std::pair<float, pose> motion(const pose& state, const observation& obs) const override;
+
+    // creates a random particle
+    pose uniform() const override;
+
+private:
+    // sample from normal distribution with zero mean and b^2 variance
+    float sample(float b2) const;
 
     // helper functions for motion and probability
     std::pair<float, pose> odometry(const pose& state, const observation& obs) const;
     float rangefinder(const line<2>& r, const range_settings& theta) const;
-
-    // creates a random particle
-    pose uniform() const override;
 
     map& maze;
 
