@@ -157,5 +157,5 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
 
 pose forrest_filter::uniform() const
 {
-    return pose();
+    return pose(dist_x(gen), dist_y(gen), dist_theta(gen));
 }

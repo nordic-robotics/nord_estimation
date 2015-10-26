@@ -55,13 +55,19 @@ public:
     forrest_filter(const std::array<float, 4>& alpha,
                    const std::array<range_settings, 6>& ir_theta,
                    unsigned int num_particles, map& maze, const pose& init)
-        : alpha(alpha), ir_theta(ir_theta), maze(maze), filter(num_particles, init)
+        : alpha(alpha), ir_theta(ir_theta), maze(maze),
+          dist_x(maze.get_min_x(), maze.get_max_x()),
+          dist_y(maze.get_min_y(), maze.get_max_y()),
+          dist_theta(-M_PI, M_PI), filter(num_particles, init)
     {
     }
     forrest_filter(const std::array<float, 4>& alpha,
                    const std::array<range_settings, 6>& ir_theta,
                    unsigned int num_particles, map& maze)
-        : alpha(alpha), ir_theta(ir_theta), maze(maze), filter(num_particles)
+        : alpha(alpha), ir_theta(ir_theta), maze(maze),
+          dist_x(maze.get_min_x(), maze.get_max_x()),
+          dist_y(maze.get_min_y(), maze.get_max_y()),
+          dist_theta(-M_PI, M_PI), filter(num_particles)
     {
     }
 
@@ -86,4 +92,9 @@ public:
     std::array<float, 4> alpha;
     // IR parameters
     std::array<range_settings, 6> ir_theta;
+
+    // uniform map distributions
+    mutable std::uniform_real_distribution<float> dist_x;
+    mutable std::uniform_real_distribution<float> dist_y;
+    mutable std::uniform_real_distribution<float> dist_theta;
 };

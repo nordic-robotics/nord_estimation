@@ -20,6 +20,10 @@ public:
     opt_point<2> raycast(line<2> ray) const;
     bool contains(point<2> p) const;
     const std::vector<line<2>>& get_walls() const;
+    const float get_min_x() const { return min_x; };
+    const float get_max_x() const { return max_x; };
+    const float get_min_y() const { return min_y; };
+    const float get_max_y() const { return max_y; };
 
 private:
     std::vector<line<2>> walls;
