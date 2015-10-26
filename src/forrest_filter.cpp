@@ -132,7 +132,7 @@ float forrest_filter::rangefinder(const line<2>& r, const range_settings& theta)
 {
     auto dir = (r.end - r.start).normalized();
     auto ray = line<2>(r.start, r.start + dir * theta.z_max * 2);
-    auto p = maze->raycast(ray);
+    auto p = maze.raycast(ray);
     auto z_star = theta.z_max;
     if (p)
         z_star = (p.value() - r.start).length();

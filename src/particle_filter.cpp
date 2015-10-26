@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
     forrest_filter filter(std::array<float, 4>{0, 0, 0, 0},
                           std::array<range_settings, 6>(),
-                          1000, &maze, pose(0, 0, 0));
+                          1000, maze, pose(0, 0, 0));
 
     observer o(n, observer_settings(point<2>(), point<2>(),
                                     point<2>(), point<2>(),

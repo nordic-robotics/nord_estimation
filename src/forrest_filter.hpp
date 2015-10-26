@@ -54,13 +54,13 @@ class forrest_filter : public dust::filter<pose, observation>
 public:
     forrest_filter(const std::array<float, 4>& alpha,
                    const std::array<range_settings, 6>& ir_theta,
-                   unsigned int num_particles, map* maze, const pose& init)
+                   unsigned int num_particles, map& maze, const pose& init)
         : alpha(alpha), ir_theta(ir_theta), maze(maze), filter(num_particles, init)
     {
     }
     forrest_filter(const std::array<float, 4>& alpha,
                    const std::array<range_settings, 6>& ir_theta,
-                   unsigned int num_particles, map* maze)
+                   unsigned int num_particles, map& maze)
         : alpha(alpha), ir_theta(ir_theta), maze(maze), filter(num_particles)
     {
     }
@@ -80,7 +80,7 @@ public:
     // creates a random particle
     pose uniform() const override;
 
-    map* maze;
+    map& maze;
 
     // odometry parameters
     std::array<float, 4> alpha;
