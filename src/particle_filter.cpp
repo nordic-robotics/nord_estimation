@@ -130,6 +130,7 @@ int main(int argc, char** argv)
     forrest_filter filter(std::array<float, 4>{0, 0, 0, 0},
                           std::array<range_settings, 6>(),
                           1000, maze, pose(0, 0, 0));
+    filter.reset();
 
     observer o(n, observer_settings(point<2>(), point<2>(),
                                     point<2>(), point<2>(),
@@ -160,6 +161,16 @@ int main(int argc, char** argv)
         p.y = guess.second.y;
         p.theta = guess.second.theta;
         guess_pub.publish(p);
+
+        std::vector<point<2>> particles;
+        std::transform(filter.get_particles().begin(),
+                       filter.get_particles().end(),
+                       std::back_inserter(particles),
+                       [&](const pose& p){
+                           return point<2>(p.x, p.y);
+                       });
+        map_pub.publish(create_point_message(particles, 0.7, 0.7, 1.0));
+        map_pub.publish(create_pose_message(guess.second));
 
         r.sleep();
     }
