@@ -64,6 +64,36 @@ visualization_msgs::Marker create_map_message(const map& maze)
     return line_list;
 }
 
+visualization_msgs::Marker create_point_message(const std::vector<point<2>>& points,
+                                                float r, float g, float b)
+{
+    visualization_msgs::Marker point_list;
+    point_list.id = 1;
+    point_list.type = visualization_msgs::Marker::POINTS;
+    point_list.color.a = 1.0f;
+    point_list.color.r = r;
+    point_list.color.g = g;
+    point_list.color.b = b;
+    point_list.header.frame_id = "/map";
+    point_list.header.stamp = ros::Time::now();
+    point_list.ns = "particle_filter";
+    point_list.action = visualization_msgs::Marker::ADD;
+    point_list.pose.orientation.w = 1.0;
+    point_list.lifetime = ros::Duration();
+    point_list.scale.x = point_list.scale.y = 0.01;
+
+    for (auto& p : points)
+    {
+        geometry_msgs::Point p0;
+        p0.x = p.x();
+        p0.y = p.y();
+        p0.z = 0;
+        point_list.points.push_back(p0);
+    }
+
+    return point_list;
+}
+
 int main(int argc, char** argv)
 {
     using geometry_msgs::Pose2D;
