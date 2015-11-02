@@ -83,11 +83,6 @@ pose forrest_filter::motion_model(const pose& state, const observation& obs) con
         next.x += - vw * std::sin(state.theta) + vw * sin(state.theta + w_hat * obs.dt);
         next.y += + vw * std::cos(state.theta) - vw * cos(state.theta + w_hat * obs.dt);
     }
-    else
-    {
-        //next.x += v_hat * std::cos(state.theta) * obs.dt;
-        //next.y += v_hat * std::sin(state.theta) * obs.dt;
-    }
     next.theta += w_hat * obs.dt + gamma_hat * obs.dt;
 
     return next;
