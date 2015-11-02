@@ -76,6 +76,11 @@ namespace dust
             return particles;
         }
 
+        const unsigned int get_num_particles() const
+        {
+            return num_particles;
+        }
+
         const std::vector<std::pair<float, State>>& get_sampled_particles() const
         {
             return sampled_particles;
