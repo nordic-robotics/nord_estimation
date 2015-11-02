@@ -10,16 +10,12 @@ namespace dust
     class filter
     {
     public:
-        using motion_model = std::function<std::pair<float, State>(const State&,
-                                                                   const Observation&)>;
-        using uniform_state = std::function<State()>;
-
         filter(unsigned int num_particles, const State& init)
             : num_particles(num_particles),
               resample_dist(0, 1.0f / num_particles),
-              particles(num_particles, init)
+              particles(num_particles, init),
+              sampled_particles(num_particles)
         {
-            sampled_particles.resize(num_particles);
         }
 
         void reset()
@@ -28,6 +24,10 @@ namespace dust
             particles.reserve(num_particles);
             std::generate_n(std::back_inserter(particles), num_particles,
                             [&]{ return uniform(); });
+        }
+        void reset(const State& s)
+        {
+            std::fill(particles.begin(), particles.end(), s);
         }
 
         void update(const Observation& z)
@@ -41,6 +41,7 @@ namespace dust
                            });
 
             particles.clear();
+            particles.reserve(num_particles);
             auto r = resample_dist(gen);
             auto c = sampled_particles.front().first;
             unsigned int i = 0;
@@ -61,7 +62,7 @@ namespace dust
             std::pair<float, State> largest = { 0, State() };
             for (auto& p : sampled_particles)
             {
-                if (p.first > largest.first)
+                if (p.first >= largest.first)
                 {
                     largest = p;
                 }
