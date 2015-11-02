@@ -8,21 +8,6 @@ namespace
         return n * n;
     }
 
-    // wrap an angle to [-pi, pi]
-    // assumes the angle is not more than 2pi away from that range
-    float wrap(float angle)
-    {
-        if (angle < -M_PI)
-        {
-            angle += 2 * M_PI;
-        }
-        else if (angle > M_PI)
-        {
-            angle -= 2 * M_PI;
-        }
-        return angle;
-    }
-
     // probability of the value 'a' given a zero mean and b^2 variance
     float prob(float a, float b2)
     {
@@ -57,7 +42,7 @@ namespace
     // discrete rangefinder distribution
     float p_max(const range_settings& theta, float z)
     {
-        return float(z == theta.z_max);
+        return float(z >= theta.z_max);
     }
 
     // uniform rangefinder distribution
@@ -71,67 +56,71 @@ namespace
 }
 
 // sample from normal distribution with zero mean and b^2 variance
-float forrest_filter::sample(float b2) const
+float forrest_filter::sample(float b) const
 {
-    static std::uniform_real_distribution<float> dist(-1, 1);
-    auto b = std::sqrt(b2);
     float sum = 0;
     for (unsigned int i = 0; i < 12; i++)
     {
-        sum += dist(gen) * b;
+        sum += dist_sample(gen);
     }
-    return sum / 2;
+    return b * sum / 6;
 }
 
-std::pair<float, pose> forrest_filter::odometry(const pose& state,
-                                                const observation& obs) const
+pose forrest_filter::motion_model(const pose& state, const observation& obs) const
 {
-    // common to both motion and probability
-    auto delta_rot1 = std::atan2(obs.odometry.y - obs.odometry_prev.y,
-                                 obs.odometry.x - obs.odometry_prev.x)
-                    - obs.odometry_prev.theta;
-    auto delta_trans = std::hypot(obs.odometry_prev.x - obs.odometry.x,
-                                  obs.odometry_prev.y - obs.odometry.y);
-    auto delta_rot2 = wrap(obs.odometry.theta - obs.odometry_prev.theta - delta_rot1);
+    auto v_hat = obs.v + sample(alpha[0] * std::abs(obs.v)
+                              + alpha[1] * std::abs(obs.w));
+    auto w_hat = obs.w + sample(alpha[2] * std::abs(obs.v)
+                              + alpha[3] * std::abs(obs.w));
+    auto gamma_hat =     sample(alpha[4] * std::abs(obs.v)
+                              + alpha[5] * std::abs(obs.w));
 
-    // motion
-    auto delta_rot1_hat = delta_rot1 - sample(alpha[0] * square(delta_rot1)
-                                            + alpha[1] * square(delta_trans));
-    auto delta_trans_hat = delta_trans - sample(alpha[2] * square(delta_trans)
-                                              + alpha[3] * square(delta_rot1)
-                                              + alpha[3] * square(delta_rot2));
-    auto delta_rot2_hat = delta_rot2 - sample(alpha[0] * square(delta_rot2)
-                                            + alpha[1] * square(delta_trans));
+    auto vw = v_hat / w_hat;
 
-    pose next;
-    next.x = state.x + delta_trans_hat * std::cos(state.theta + delta_rot1_hat);
-    next.y = state.y + delta_trans_hat * std::sin(state.theta + delta_rot1_hat);
-    next.theta = wrap(state.theta + delta_rot1_hat + delta_rot2_hat);
+    pose next = state;
+    if (w_hat != 0)
+    {
+        next.x += - vw * std::sin(state.theta) + vw * sin(state.theta + w_hat * obs.dt);
+        next.y += + vw * std::cos(state.theta) - vw * cos(state.theta + w_hat * obs.dt);
+    }
+    else
+    {
+        //next.x += v_hat * std::cos(state.theta) * obs.dt;
+        //next.y += v_hat * std::sin(state.theta) * obs.dt;
+    }
+    next.theta += w_hat * obs.dt + gamma_hat * obs.dt;
 
-    // probability
-    auto p_delta_rot1_hat = std::atan2(next.y - state.y, next.x - state.x)
-                          - state.theta;
-    auto p_delta_trans_hat = std::hypot(state.x - next.x, state.y - next.y);
-    auto p_delta_rot2_hat = wrap(next.theta - state.theta - p_delta_rot1_hat);
+    return next;
+}
 
-    auto p1 = prob(wrap(delta_rot1 - p_delta_rot1_hat),
-                   alpha[0] * square(p_delta_rot1_hat)
-                 + alpha[1] * square(p_delta_trans_hat));
-    auto p2 = prob(wrap(delta_trans - p_delta_trans_hat),
-                   alpha[2] * square(p_delta_trans_hat)
-                 + alpha[3] * square(p_delta_rot1_hat)
-                 + alpha[1] * square(p_delta_trans_hat));
-    auto p3 = prob(wrap(delta_rot2 - p_delta_rot2_hat),
-                   alpha[0] * square(p_delta_rot2_hat)
-                 + alpha[1] * square(p_delta_trans_hat));
+float forrest_filter::motion_probability(const pose& state, const pose& next,
+                                         const observation& obs) const
+{
+    auto mu = 0.5 * ((state.x - next.x) * std::cos(state.theta)
+                   + (state.y - next.y) * std::sin(state.theta))
+                  / ((state.y - next.y) * std::cos(state.theta)
+                   - (state.x - next.x) * std::sin(state.theta));
 
-    return {p1 * p2 * p3, next};
+    auto xs = (state.x + next.x) / 2 + mu * (state.y - next.y);
+    auto ys = (state.y + next.y) / 2 + mu * (next.x - state.x);
+    auto rs = std::hypot(state.x - xs, state.y - ys);
+
+    auto d_theta = std::atan2(next.y - ys, next.x - xs)
+                 - std::atan2(state.y - ys, state.x - xs);
+
+    auto v_hat = rs * d_theta / obs.dt;
+    auto w_hat = d_theta / obs.dt;
+    auto gamma_hat = (next.theta - state.theta) / obs.dt - w_hat;
+
+    return prob(obs.v - v_hat, alpha[0] * std::abs(obs.v) + alpha[1] * std::abs(obs.w))
+         * prob(obs.w - w_hat, alpha[2] * std::abs(obs.v) + alpha[3] * std::abs(obs.w))
+         * prob(gamma_hat,     alpha[4] * std::abs(obs.v) + alpha[5] * std::abs(obs.w));
 }
 
 float forrest_filter::rangefinder(const line<2>& r, const range_settings& theta) const
 {
     auto dir = (r.end - r.start).normalized();
-    auto ray = line<2>(r.start, r.start + dir * theta.z_max * 2);
+    auto ray = line<2>(r.start, r.start + dir * theta.z_max);
     auto p = maze.raycast(ray);
     auto z_star = theta.z_max;
     if (p)
@@ -147,11 +136,9 @@ float forrest_filter::rangefinder(const line<2>& r, const range_settings& theta)
 std::pair<float, pose> forrest_filter::motion(const pose& state,
                                               const observation& obs) const
 {
-    auto next = odometry(state, obs);
-    for (size_t i = 0; i < obs.ir.size(); i++)
-    {
-        next.first *= rangefinder(obs.ir[i].rotated(next.second.theta), ir_theta[i]);
-    }
+    std::pair<float, pose> next;
+    next.second = motion_model(state, obs);
+    next.first = 1.0f / get_particles().size();
     return next;
 }
 

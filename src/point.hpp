@@ -42,6 +42,15 @@ public:
         return output;
     }
 
+    point<2> rotated(float theta) const
+    {
+        static_assert(d == 2, "can only rotate if 2d");
+        auto st = std::sin(theta);
+        auto ct = std::cos(theta);
+        return point<2>(x() * ct - y() * st,
+                        x() * st + y() * ct);
+    }
+
     friend point<d> operator*(const point& p, float other)
     {
         point<d> output;

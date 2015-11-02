@@ -19,15 +19,14 @@ public:
 class observation
 {
 public:
-    observation(const pose& odometry, const pose& odometry_prev,
-                const std::array<line<2>, 6>& ir)
-        : odometry(odometry), odometry_prev(odometry_prev),
-          ir(ir) { };
+    observation(float v, float w, const std::array<line<2>, 6>& ir, float dt)
+        : v(v), w(w), ir(ir), dt(dt) { };
     observation() { };
 
-    pose odometry;
-    pose odometry_prev;
+    float v;
+    float w;
     std::array<line<2>, 6> ir;
+    float dt;
 };
 
 class range_settings
@@ -52,13 +51,14 @@ public:
 class forrest_filter : public dust::filter<pose, observation>
 {
 public:
-    forrest_filter(const std::array<float, 4>& alpha,
+    forrest_filter(const std::array<float, 6>& alpha,
                    const std::array<range_settings, 6>& ir_theta,
                    unsigned int num_particles, map& maze, const pose& init)
         : alpha(alpha), ir_theta(ir_theta), maze(maze),
           dist_x(maze.get_min_x(), maze.get_max_x()),
           dist_y(maze.get_min_y(), maze.get_max_y()),
-          dist_theta(-M_PI, M_PI), filter(num_particles, init)
+          dist_theta(-M_PI, M_PI), dist_sample(-1, 1),
+          filter(num_particles, init)
     {
     }
 
@@ -74,13 +74,15 @@ private:
     float sample(float b2) const;
 
     // helper functions for motion and probability
-    std::pair<float, pose> odometry(const pose& state, const observation& obs) const;
+    pose motion_model(const pose& state, const observation& obs) const;
+    float motion_probability(const pose& state, const pose& next,
+                             const observation& obs) const;
     float rangefinder(const line<2>& r, const range_settings& theta) const;
 
     map& maze;
 
     // odometry parameters
-    std::array<float, 4> alpha;
+    std::array<float, 6> alpha;
     // IR parameters
     std::array<range_settings, 6> ir_theta;
 
@@ -88,4 +90,5 @@ private:
     mutable std::uniform_real_distribution<float> dist_x;
     mutable std::uniform_real_distribution<float> dist_y;
     mutable std::uniform_real_distribution<float> dist_theta;
+    mutable std::uniform_real_distribution<float> dist_sample;
 };
