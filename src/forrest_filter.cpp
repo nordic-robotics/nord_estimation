@@ -141,7 +141,26 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
 {
     std::pair<float, pose> next;
     next.second = motion_model(state, obs);
-    next.first = 1.0f / get_particles().size();
+    //float p_encoders = motion_probability(state, next.second, obs);
+    auto loc = point<2>(next.second.x, next.second.y);
+
+    float p_ir_long = 1.0f;
+    for (size_t i = 0; i < 2; i++)
+    {
+        p_ir_long *= rangefinder(obs.ir[i].rotated(next.second.theta) + loc, ir_theta[i]);
+    }
+
+    float p_ir_short = 1.0f;
+    for (size_t i = 2; i < obs.ir.size(); i++)
+    {
+        p_ir_short *= rangefinder(obs.ir[i].rotated(next.second.theta) + loc, ir_theta[i]);
+    }
+
+    float p_maze = map_probability(state, next.second);
+
+    next.first = (p_ir_long
+                * p_ir_short
+                * p_maze);
     return next;
 }
 
