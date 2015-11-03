@@ -55,7 +55,7 @@ namespace
     }
 }
 
-// sample from normal distribution with zero mean and b^2 variance
+// sample from normal distribution with zero mean and b variance
 float forrest_filter::sample(float b) const
 {
     float sum = 0;
@@ -126,6 +126,14 @@ float forrest_filter::rangefinder(const line<2>& r, const range_settings& theta)
          + theta.z_p_short * p_short(theta, z, z_star)
          + theta.z_p_max * p_max(theta, z)
          + theta.z_p_rand * p_rand(theta, z);
+}
+
+float forrest_filter::map_probability(const pose& state, const pose& next) const
+{
+    auto inside = float(maze.contains(point<2>(state.x, state.y)));
+    auto hit_wall = bool(maze.raycast(line<2>(point<2>(state.x, state.y),
+                                              point<2>(next.x, next.y))));
+    return (inside * float(!hit_wall) + 0.000000001) / maze.get_area();
 }
 
 std::pair<float, pose> forrest_filter::motion(const pose& state,
