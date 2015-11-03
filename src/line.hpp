@@ -17,13 +17,20 @@ public:
 
     line rotated(float theta) const
     {
+        static_assert(d == 2, "can only rotate if 2d");
         point<d> p = end - start;
         auto st = std::sin(theta);
         auto ct = std::cos(theta);
-        return line(point<d>(start.x() * ct - start.y() * st,
-                             start.x() * st + start.y() * ct),
-                    point<d>(p.x() * ct - p.y() * st,
-                             p.x() * st + p.y() * ct));
+        auto p0 = point<d>(start.x() * ct - start.y() * st,
+                           start.x() * st + start.y() * ct);
+        auto p1 = p0 + point<d>(p.x() * ct - p.y() * st,
+                                p.x() * st + p.y() * ct);
+        return line(p0, p1);
+    }
+
+    friend line<d> operator+(const line& lhs, const point<d>& rhs)
+    {
+        return line<d>(lhs.start + rhs, lhs.end + rhs);
     }
 
     point<d> start;
