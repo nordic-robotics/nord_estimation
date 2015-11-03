@@ -42,10 +42,10 @@ public:
                     [settings](const Encoders::ConstPtr& e) {
                         Pose2D res;
                         float delta_time = e->timestamp / 1000.0f;
-                        auto estimated_w1 = (-e->delta_encoder1 * 2 * M_PI / delta_time)
-                                                 / 360.0f;
-                        auto estimated_w2 = (-e->delta_encoder2 * 2 * M_PI / delta_time)
-                                                 / 360.0f;
+                        float estimated_w1 = (-e->delta_encoder1 * 2 * M_PI / delta_time)
+                                             / 360.0f;
+                        float estimated_w2 = (-e->delta_encoder2 * 2 * M_PI / delta_time)
+                                             / 360.0f;
                         auto v = settings.wheel_r * (estimated_w1 + estimated_w2) / 2.0f;
                         auto w = settings.wheel_r * (estimated_w2 - estimated_w1)
                                / settings.wheel_b;
