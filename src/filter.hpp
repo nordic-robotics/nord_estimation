@@ -34,24 +34,27 @@ namespace dust
         {
             sampled_particles.clear();
             sampled_particles.reserve(num_particles);
+            float sum = 0;
             std::transform(particles.begin(), particles.end(),
                            std::back_inserter(sampled_particles),
                            [&](const State& particle) {
-                               return motion(particle, z);
+                               auto next = motion(particle, z);
+                               sum += next.first;
+                               return next;
                            });
 
             particles.clear();
             particles.reserve(num_particles);
             auto r = resample_dist(gen);
-            auto c = sampled_particles.front().first;
+            auto c = sampled_particles.front().first / sum;
             unsigned int i = 0;
             for (unsigned int m = 0; m < num_particles; m++)
             {
-                auto U = r + (m - 1.0f) / num_particles;
-                while (U > c)
+                auto u = r + float(m) / num_particles;
+                while (u > c)
                 {
                     i++;
-                    c += sampled_particles[i].first;
+                    c += sampled_particles[i].first / sum;
                 }
                 particles.push_back(sampled_particles[i].second);
             }
@@ -90,7 +93,7 @@ namespace dust
         virtual std::pair<float, State> motion(const State& state,
                                                const Observation& obs) const = 0;
         virtual State uniform() const = 0;
-        mutable std::mt19937 gen;
+        mutable std::ranlux24_base gen;
 
     private:
         unsigned int num_particles;
