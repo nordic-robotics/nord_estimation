@@ -16,7 +16,7 @@ map read_map(std::string filename)
     std::ifstream file(filename);
     std::string l;
     std::vector<line<2>> walls;
-    float min_x, min_y, max_x, max_y;
+    float min_x = 0, min_y = 0, max_x = 0, max_y = 0;
     while (std::getline(file, l))
     {
         std::istringstream iss(l);
@@ -64,16 +64,24 @@ visualization_msgs::Marker create_map_message(const map& maze)
     return line_list;
 }
 
-visualization_msgs::Marker create_point_message(const std::vector<point<2>>& points,
-                                                float r, float g, float b)
+visualization_msgs::Marker create_point_message(std::vector<std::pair<float, pose>> pairs)
 {
+    float max = 0;
+    float min = 10000000000;
+    for (auto& p : pairs)
+    {
+        max = std::max(p.first, max);
+        min = std::min(p.first, min);
+    }
+    for (auto& p : pairs)
+    {
+        p.first = (p.first - min) / (min - max);
+    }
+
     visualization_msgs::Marker point_list;
     point_list.id = 1;
     point_list.type = visualization_msgs::Marker::POINTS;
     point_list.color.a = 1.0f;
-    point_list.color.r = r;
-    point_list.color.g = g;
-    point_list.color.b = b;
     point_list.header.frame_id = "/map";
     point_list.header.stamp = ros::Time::now();
     point_list.ns = "pf_particles";
@@ -82,13 +90,18 @@ visualization_msgs::Marker create_point_message(const std::vector<point<2>>& poi
     point_list.lifetime = ros::Duration();
     point_list.scale.x = point_list.scale.y = 0.02;
 
-    for (auto& p : points)
+    for (auto& p : pairs)
     {
         geometry_msgs::Point p0;
-        p0.x = p.x();
-        p0.y = p.y();
+        std_msgs::ColorRGBA c0;
+        p0.x = p.second.x;
+        p0.y = p.second.y;
         p0.z = 0;
         point_list.points.push_back(p0);
+        c0.r = c0.g = 0.7;
+        c0.b = p.first;
+        c0.a = 1.0;
+        point_list.colors.push_back(c0);
     }
 
     return point_list;
@@ -205,20 +218,45 @@ int main(int argc, char** argv)
     {
         alpha[i] = std::stod(argv[1 + i]);
     }
+    float long_sigma_hit = std::stod(argv[7]);
+    float long_lambda_short = std::stod(argv[8]);
+    float long_p_hit = std::stod(argv[9]);
+    float long_p_short = std::stod(argv[10]);
+    float long_p_max = std::stod(argv[11]);
+    float long_p_rand = std::stod(argv[12]);
+    float short_sigma_hit = std::stod(argv[13]);
+    float short_lambda_short = std::stod(argv[14]);
+    float short_p_hit = std::stod(argv[15]);
+    float short_p_short = std::stod(argv[16]);
+    float short_p_max = std::stod(argv[17]);
+    float short_p_rand = std::stod(argv[18]);
+    int num_particles = std::stoi(argv[19]);
+    bool reset = std::string(argv[20]) == "reset";
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
     auto start_pose = pose(0.7, 0.2, 0);
     std::array<range_settings, 6> settings_range;
-    settings_range[0] = settings_range[1] = range_settings(0.8, 0.05, 0.2, 0.6, 0.1, 0.2, 0.1);
-    map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
-    forrest_filter filter(alpha, settings_range, 10000, maze, start_pose);
-    //filter.reset();
+    settings_range[0] = settings_range[1]
+                      = range_settings(0.7, long_sigma_hit, long_lambda_short,
+                                       long_p_hit, long_p_short,
+                                       long_p_max, long_p_rand);
+    settings_range[2] = settings_range[3]
+                      = settings_range[4]
+                      = settings_range[5]
+                      = range_settings(0.3, short_sigma_hit, short_lambda_short,
+                                       short_p_hit, short_p_short,
+                                       short_p_max, short_p_rand);
 
-    // front is 4 left 9 forward from center
+    map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
+    forrest_filter filter(alpha, settings_range, num_particles, maze, start_pose);
+
+    if (reset)
+        filter.reset();
+
     observer_settings settings(point<2>(0.09, 0.04), point<2>(-0.13, 0.03),
-                               point<2>(), point<2>(),
-                               point<2>(), point<2>(),
+                               point<2>(0.07, 0.09), point<2>(-0.06, 0.09),
+                               point<2>(0.07, -0.09), point<2>(-0.06, -0.09),
                                0.049675f, 0.2015f);
     observer o(n, settings);
 
@@ -226,7 +264,7 @@ int main(int argc, char** argv)
 
     auto map_msg = create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 1);
-    auto map_timer = n.createTimer(ros::Duration(0.25), [&](const ros::TimerEvent& e) {
+    auto map_timer = n.createTimer(ros::Duration(1), [&](const ros::TimerEvent& e) {
         map_pub.publish(map_msg);
     });
 
@@ -249,14 +287,7 @@ int main(int argc, char** argv)
         p.theta = guess.second.theta;
         guess_pub.publish(p);
 
-        std::vector<point<2>> particles;
-        std::transform(filter.get_particles().begin(),
-                       filter.get_particles().end(),
-                       std::back_inserter(particles),
-                       [&](const pose& p){
-                           return point<2>(p.x, p.y);
-                       });
-        map_pub.publish(create_point_message(particles, 0.7, 0.7, 1.0));
+        map_pub.publish(create_point_message(filter.get_sampled_particles()));
         map_pub.publish(create_pose_message(guess.second));
         map_pub.publish(create_robot_message(guess.second, settings));
 
