@@ -52,3 +52,8 @@ const std::vector<line<2>>& map::get_walls() const
 {
     return walls;
 }
+
+float map::get_area() const
+{
+    return (max_x - min_x) * (max_y - min_y);
+}
