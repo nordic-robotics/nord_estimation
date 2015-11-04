@@ -53,6 +53,7 @@ public:
                     },
                     [](const std::vector<std::valarray<float>>& readings) {
                         std::valarray<float> obs(0.0f, 3);
+                        // average velocities, sum delta_time
                         obs = std::accumulate(readings.begin(), readings.end(), obs);
                         obs[0] /= readings.size();
                         obs[1] /= readings.size();
@@ -61,6 +62,7 @@ public:
                     }),
           ir_sensors(   n, "/nord/sensors/ir",
                         [settings](const IRSensors::ConstPtr& ir) {
+                            // reconstruct IR rays
                             return std::array<line<2>, 6>({
                                 line<2>(settings.ir_front,
                                         settings.ir_front + point<2>(ir->front, 0)),

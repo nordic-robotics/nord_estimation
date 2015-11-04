@@ -15,6 +15,7 @@ public:
         return (end - start).length();
     }
 
+    // rotation around (0, 0)
     line rotated(float theta) const
     {
         static_assert(d == 2, "can only rotate if 2d");

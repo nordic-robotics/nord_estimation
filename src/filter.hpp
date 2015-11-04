@@ -43,6 +43,7 @@ namespace dust
                                return next;
                            });
 
+            // division by sum is to normalize sum to 1
             particles.clear();
             particles.reserve(num_particles);
             auto r = resample_dist(gen);

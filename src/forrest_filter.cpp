@@ -88,6 +88,7 @@ pose forrest_filter::motion_model(const pose& state, const observation& obs) con
     return next;
 }
 
+// currently unused
 float forrest_filter::motion_probability(const pose& state, const pose& next,
                                          const observation& obs) const
 {
@@ -114,9 +115,13 @@ float forrest_filter::motion_probability(const pose& state, const pose& next,
 
 float forrest_filter::rangefinder(const line<2>& r, const range_settings& theta) const
 {
+    // direction of the IR sensor
     auto dir = (r.end - r.start).normalized();
+    // longest possible intersection ray
     auto ray = line<2>(r.start, r.start + dir * theta.z_max);
     auto p = maze.raycast(ray);
+
+    // if no collision, set to z_max, otherwise set to distance between start and intersection point
     auto z_star = theta.z_max;
     if (p)
         z_star = (p.value() - r.start).length();
@@ -141,9 +146,9 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
 {
     std::pair<float, pose> next;
     next.second = motion_model(state, obs);
-    //float p_encoders = motion_probability(state, next.second, obs);
     auto loc = point<2>(next.second.x, next.second.y);
 
+    // rotate the IR sensor by current rotation and offset by current position before simulating
     float p_ir_long = 1.0f;
     for (size_t i = 0; i < 2; i++)
     {
@@ -158,6 +163,7 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
 
     float p_maze = map_probability(state, next.second);
 
+    // should all be normalized, clear to multiply!
     next.first = (p_ir_long
                 * p_ir_short
                 * p_maze);
