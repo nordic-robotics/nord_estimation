@@ -7,7 +7,7 @@
 namespace maffs
 {
     // returns (mean, stddev)
-    template<class InputIt, class T>
+    template<class InputIt, class T = typename std::iterator_traits<InputIt>::value_type>
     std::pair<float, float>
     estimate_wrapped_normal_distribution(InputIt first, InputIt last, T min, T max)
     {
@@ -33,7 +33,7 @@ namespace maffs
     }
 
     // returns (mean, stddev)
-    template<class InputIt, class T>
+    template<class InputIt, class T = typename std::iterator_traits<InputIt>::value_type>
     std::pair<float, float>
     estimate_normal_distribution(InputIt first, InputIt last)
     {
