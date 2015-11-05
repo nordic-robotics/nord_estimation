@@ -112,7 +112,16 @@ int main(int argc, char** argv)
             filter.update(obs);
         }
 
-        auto guess = filter.estimate_largest_weight();
+
+        std::pair<float, State> guess = { 0, State() };
+        for (auto& p : filter.get_sampled_particles())
+        {
+            if (p.first >= guess.first)
+            {
+                guess = p;
+            }
+        }
+
         Pose2D p;
         p.x = guess.second.x;
         p.y = guess.second.y;

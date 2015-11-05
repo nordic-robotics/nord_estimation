@@ -61,20 +61,6 @@ namespace dust
             }
         }
 
-        std::pair<float, State> estimate_largest_weight()
-        {
-            std::pair<float, State> largest = { 0, State() };
-            for (auto& p : sampled_particles)
-            {
-                if (p.first >= largest.first)
-                {
-                    largest = p;
-                }
-            }
-
-            return largest;
-        }
-
         const std::vector<State>& get_particles() const
         {
             return particles;
