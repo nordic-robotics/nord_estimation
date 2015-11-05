@@ -1,12 +1,14 @@
 #include "ros/ros.h"
 #include "visualization_msgs/Marker.h"
 #include "geometry_msgs/Pose2D.h"
+#include "nord_messages/PoseEstimate.h"
 #include "map.hpp"
 #include "forrest_filter.hpp"
 
 namespace rviz
 {
     using namespace visualization_msgs;
+    using namespace nord_messages;
 
     // draws the map walls
     inline Marker create_map_message(const map& maze)
@@ -82,7 +84,7 @@ namespace rviz
         return point_list;
     }
 
-    inline Marker create_pose_message(const pose& p)
+    inline Marker create_pose_message(const PoseEstimate& p)
     {
         Marker arrow;
         arrow.id = 3;
@@ -97,19 +99,20 @@ namespace rviz
         arrow.scale.x = arrow.scale.y = arrow.scale.z = 0.01;
 
         geometry_msgs::Point p0;
-        p0.x = p.x;
-        p0.y = p.y;
+        p0.x = p.x.mean;
+        p0.y = p.y.mean;
 
         auto p1 = p0;
-        p1.x += std::cos(p.theta) * 0.1;
-        p1.y += std::sin(p.theta) * 0.1;
+        p1.x += std::cos(p.theta.mean) * 0.1;
+        p1.y += std::sin(p.theta.mean) * 0.1;
         arrow.points.push_back(p0);
         arrow.points.push_back(p1);
         return arrow;
     }
 
     // draws the robot outline
-    inline Marker create_robot_message(const pose& p, const observer_settings& settings)
+    inline Marker create_robot_message(const PoseEstimate& p,
+                                       const observer_settings& settings)
     {
         Marker line_list;
         line_list.id = 4;
@@ -124,10 +127,14 @@ namespace rviz
         line_list.lifetime = ros::Duration();
         line_list.scale.x = 0.01;
 
+        auto x = p.x.mean;
+        auto y = p.y.mean;
+        auto theta = p.theta.mean;
+
         auto to_msg = [&](const point<2> p0) {
             geometry_msgs::Point p1;
-            p1.x = p.x + p0.x();
-            p1.y = p.y + p0.y();
+            p1.x = x + p0.x();
+            p1.y = y + p0.y();
             p1.z = 0;
             return p1;
         };
@@ -146,10 +153,10 @@ namespace rviz
             float front = 0.075;
             float back = 0.125;
 
-            auto p0 = point<2>(-back, -sides).rotated(p.theta);
-            auto p1 = point<2>(-back, +sides).rotated(p.theta);
-            auto p2 = point<2>(front, +sides).rotated(p.theta);
-            auto p3 = point<2>(front, -sides).rotated(p.theta);
+            auto p0 = point<2>(-back, -sides).rotated(theta);
+            auto p1 = point<2>(-back, +sides).rotated(theta);
+            auto p2 = point<2>(front, +sides).rotated(theta);
+            auto p3 = point<2>(front, -sides).rotated(theta);
 
             enlist({p0, p1, p2, p3});
         }
@@ -159,36 +166,36 @@ namespace rviz
             auto width = 0.02;
 
             { // right wheel
-                auto p0 = point<2>(+radius, -side - width).rotated(p.theta);
-                auto p1 = point<2>(-radius, -side - width).rotated(p.theta);
-                auto p2 = point<2>(-radius, -side + width).rotated(p.theta);
-                auto p3 = point<2>(+radius, -side + width).rotated(p.theta);
+                auto p0 = point<2>(+radius, -side - width).rotated(theta);
+                auto p1 = point<2>(-radius, -side - width).rotated(theta);
+                auto p2 = point<2>(-radius, -side + width).rotated(theta);
+                auto p3 = point<2>(+radius, -side + width).rotated(theta);
 
                 enlist({p0, p1, p2, p3});
             }
             { // left wheel
-                auto p0 = point<2>(+radius, +side - width).rotated(p.theta);
-                auto p1 = point<2>(-radius, +side - width).rotated(p.theta);
-                auto p2 = point<2>(-radius, +side + width).rotated(p.theta);
-                auto p3 = point<2>(+radius, +side + width).rotated(p.theta);
+                auto p0 = point<2>(+radius, +side - width).rotated(theta);
+                auto p1 = point<2>(-radius, +side - width).rotated(theta);
+                auto p2 = point<2>(-radius, +side + width).rotated(theta);
+                auto p3 = point<2>(+radius, +side + width).rotated(theta);
 
                 enlist({p0, p1, p2, p3});
             }
         }
         { // IR sensors
             auto d = 0.02;
-            line_list.points.push_back(to_msg(settings.ir_front.rotated(p.theta)));
-            line_list.points.push_back(to_msg((settings.ir_front + point<2>(d, 0)).rotated(p.theta)));
-            line_list.points.push_back(to_msg(settings.ir_back.rotated(p.theta)));
-            line_list.points.push_back(to_msg((settings.ir_back - point<2>(d, 0)).rotated(p.theta)));
-            line_list.points.push_back(to_msg(settings.ir_left_front.rotated(p.theta)));
-            line_list.points.push_back(to_msg((settings.ir_left_front + point<2>(0, d)).rotated(p.theta)));
-            line_list.points.push_back(to_msg(settings.ir_left_back.rotated(p.theta)));
-            line_list.points.push_back(to_msg((settings.ir_left_back + point<2>(0, d)).rotated(p.theta)));
-            line_list.points.push_back(to_msg(settings.ir_right_front.rotated(p.theta)));
-            line_list.points.push_back(to_msg((settings.ir_right_front - point<2>(0, d)).rotated(p.theta)));
-            line_list.points.push_back(to_msg(settings.ir_right_back.rotated(p.theta)));
-            line_list.points.push_back(to_msg((settings.ir_right_back - point<2>(0, d)).rotated(p.theta)));
+            line_list.points.push_back(to_msg(settings.ir_front.rotated(theta)));
+            line_list.points.push_back(to_msg((settings.ir_front + point<2>(d, 0)).rotated(theta)));
+            line_list.points.push_back(to_msg(settings.ir_back.rotated(theta)));
+            line_list.points.push_back(to_msg((settings.ir_back - point<2>(d, 0)).rotated(theta)));
+            line_list.points.push_back(to_msg(settings.ir_left_front.rotated(theta)));
+            line_list.points.push_back(to_msg((settings.ir_left_front + point<2>(0, d)).rotated(theta)));
+            line_list.points.push_back(to_msg(settings.ir_left_back.rotated(theta)));
+            line_list.points.push_back(to_msg((settings.ir_left_back + point<2>(0, d)).rotated(theta)));
+            line_list.points.push_back(to_msg(settings.ir_right_front.rotated(theta)));
+            line_list.points.push_back(to_msg((settings.ir_right_front - point<2>(0, d)).rotated(theta)));
+            line_list.points.push_back(to_msg(settings.ir_right_back.rotated(theta)));
+            line_list.points.push_back(to_msg((settings.ir_right_back - point<2>(0, d)).rotated(theta)));
         }
 
         return line_list;
