@@ -35,7 +35,7 @@ namespace maffs
     // returns (mean, stddev)
     template<class InputIt, class T>
     std::pair<float, float>
-    estimate_normal_distribution(InputIt first, InputIt last, T min, T max)
+    estimate_normal_distribution(InputIt first, InputIt last)
     {
         assert(std::distance(first, last) > 0);
 
