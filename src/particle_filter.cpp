@@ -63,6 +63,7 @@ nord_messages::PoseEstimate estimate_pose(const std::vector<pose>& particles)
     std::tie(result.theta.mean, result.theta.stddev)
         = maffs::estimate_wrapped_normal_distribution(theta.begin(), theta.end(), -M_PI, M_PI);
 
+    result.stamp = ros::Time::now();
     return result;
 }
 
