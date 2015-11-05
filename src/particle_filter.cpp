@@ -3,11 +3,13 @@
 #include "std_msgs/Float32.h"
 #include "visualization_msgs/Marker.h"
 #include "geometry_msgs/Pose2D.h"
+#include "nord_messages/PoseEstimate.h"
 #include "map.hpp"
 #include "forrest_filter.hpp"
 #include "observer.hpp"
 #include "aggregator.hpp"
 #include "rviz.hpp"
+#include "estimate.hpp"
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -36,9 +38,38 @@ map read_map(std::string filename)
     return map(walls, min_x, min_y, max_x, max_y);
 }
 
+// (mean, variance) for each dimension
+nord_messages::PoseEstimate estimate_pose(const std::vector<pose>& particles) 
+{
+    std::vector<float> x;
+    x.reserve(particles.size());
+    std::vector<float> y;
+    y.reserve(particles.size());
+    std::vector<float> theta;
+    theta.reserve(particles.size());
+
+    for (auto& p : particles)
+    {
+        x.push_back(p.x);
+        y.push_back(p.y);
+        theta.push_back(p.theta);
+    }
+
+    nord_messages::PoseEstimate result;
+    std::tie(result.x.mean, result.x.stddev)
+        = maffs::estimate_normal_distribution(x.begin(), x.end());
+    std::tie(result.y.mean, result.y.stddev)
+        = maffs::estimate_normal_distribution(y.begin(), y.end());
+    std::tie(result.theta.mean, result.theta.stddev)
+        = maffs::estimate_wrapped_normal_distribution(theta.begin(), theta.end(), -M_PI, M_PI);
+
+    return result;
+}
+
 int main(int argc, char** argv)
 {
     using geometry_msgs::Pose2D;
+    using nord_messages::PoseEstimate;
 
     std::array<float, 6> alpha;
     for (unsigned i = 0; i < 6; i++)
@@ -91,7 +122,7 @@ int main(int argc, char** argv)
                                0.049675f, 0.2015f);
     observer o(n, settings);
 
-    ros::Publisher guess_pub = n.advertise<Pose2D>("/nord/estimation/largest_weight", 10);
+    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/largest_weight", 10);
 
     auto map_msg = rviz::create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 1);
@@ -112,25 +143,12 @@ int main(int argc, char** argv)
             filter.update(obs);
         }
 
-
-        std::pair<float, State> guess = { 0, State() };
-        for (auto& p : filter.get_sampled_particles())
-        {
-            if (p.first >= guess.first)
-            {
-                guess = p;
-            }
-        }
-
-        Pose2D p;
-        p.x = guess.second.x;
-        p.y = guess.second.y;
-        p.theta = guess.second.theta;
-        guess_pub.publish(p);
+        auto guess = estimate_pose(filter.get_particles());
+        guess_pub.publish(guess);
 
         map_pub.publish(rviz::create_points_message(filter.get_sampled_particles()));
-        map_pub.publish(rviz::create_pose_message(guess.second));
-        map_pub.publish(rviz::create_robot_message(guess.second, settings));
+        map_pub.publish(rviz::create_pose_message(guess));
+        map_pub.publish(rviz::create_robot_message(guess, settings));
 
         r.sleep();
     }
