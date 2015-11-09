@@ -77,6 +77,7 @@ int main(int argc, char** argv)
     {
         alpha[i] = std::stod(argv[1 + i]);
     }
+    // nord_estimation particle_filter 0.2 0.2 0.2 0.2 0.2 0.2 0.2 5 0.95 0.01 0.01 0.03 0.1 9 0.4 0.1 0.25 0.25 10000 reset
     float long_sigma_hit = std::stod(argv[7]);
     float long_lambda_short = std::stod(argv[8]);
     float long_p_hit = std::stod(argv[9]);
