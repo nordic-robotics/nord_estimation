@@ -95,7 +95,7 @@ int main(int argc, char** argv)
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
-    auto start_pose = pose(0.7, 0.2, 0);
+    auto start_pose = pose(0.795, 0.23, 0.0);
     std::array<range_settings, 6> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]
@@ -124,7 +124,7 @@ int main(int argc, char** argv)
                                0.049675f, 0.2015f);
     observer o(n, settings);
 
-    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/gaussian", 10);
+    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/gaussian", 1);
 
     auto map_msg = rviz::create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 1);
