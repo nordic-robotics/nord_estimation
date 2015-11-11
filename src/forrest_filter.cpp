@@ -8,10 +8,31 @@ namespace
         return n * n;
     }
 
-    // probability of the value 'a' given a zero mean and b^2 variance
-    float prob(float a, float b2)
+    // wrap an angle to [-pi, pi]
+    // assumes the angle is not more than 2pi away from that range
+    float wrap(float angle)
     {
-        auto numerator = std::exp(-0.5f * square(a) / b2);
+        if (angle < -M_PI)
+        {
+            angle += 2 * M_PI;
+        }
+        else if (angle > M_PI)
+        {
+            angle -= 2 * M_PI;
+        }
+        return angle;
+    }
+
+    float ang_diff(float a, float b)
+    {
+        float diff = wrap(b) - wrap(a);
+        return wrap(diff);
+    }
+
+    // probability of the value 'a' given a zero mean and b^2 variance
+    float prob(float a, float b2, float mu = 0)
+    {
+        auto numerator = std::exp(-0.5f * square(a - mu) / b2);
         auto denominator = std::sqrt(2 * M_PI * b2);
         return numerator / denominator;
     }
@@ -121,7 +142,8 @@ float forrest_filter::rangefinder(const line<2>& r, const range_settings& theta)
     auto ray = line<2>(r.start, r.start + dir * theta.z_max);
     auto p = maze.raycast(ray);
 
-    // if no collision, set to z_max, otherwise set to distance between start and intersection point
+    // if no collision, set to z_max, otherwise set
+    // to distance between start and intersection point
     auto z_star = theta.z_max;
     if (p)
         z_star = (p.value() - r.start).length();
@@ -141,6 +163,12 @@ float forrest_filter::map_probability(const pose& state, const pose& next) const
     return (inside * float(!hit_wall) + 0.000000001) / maze.get_area();
 }
 
+float forrest_filter::imu_probability(const pose& state, const pose& next,
+                                      const observation& obs) const
+{
+    return prob(wrap(obs.ang_z * obs.dt), imu_variance, ang_diff(state.theta, next.theta));
+}
+
 std::pair<float, pose> forrest_filter::motion(const pose& state,
                                               const observation& obs) const
 {
@@ -148,7 +176,8 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
     next.second = motion_model(state, obs);
     auto loc = point<2>(next.second.x, next.second.y);
 
-    // rotate the IR sensor by current rotation and offset by current position before simulating
+    // rotate the IR sensor by current rotation and offset
+    // by current position before simulating
     float p_ir_long = 1.0f;
     for (size_t i = 0; i < 2; i++)
     {
@@ -163,10 +192,13 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
 
     float p_maze = map_probability(state, next.second);
 
+    float p_imu = imu_probability(state, next.second, obs);
+
     // should all be normalized, clear to multiply!
     next.first = (p_ir_long
                 * p_ir_short
-                * p_maze);
+                * p_maze
+                * p_imu);
     return next;
 }
 

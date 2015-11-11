@@ -4,6 +4,7 @@
 #include "geometry_msgs/Pose2D.h"
 #include "ras_arduino_msgs/Encoders.h"
 #include "nord_messages/IRSensors.h"
+#include "sensor_msgs/Imu.h"
 #include "forrest_filter.hpp"
 #include "aggregator.hpp"
 #include <valarray>
@@ -35,6 +36,7 @@ class observer
     using Encoders = ras_arduino_msgs::Encoders;
     using IRSensors = nord_messages::IRSensors;
     using Pose2D = geometry_msgs::Pose2D;
+    using Imu = sensor_msgs::Imu;
 public:
     observer(ros::NodeHandle& n, const observer_settings& settings)
         : pub(n.advertise<geometry_msgs::Pose2D>("/nord/estimation/particle_filter", 10)),
@@ -49,16 +51,7 @@ public:
                         auto v = settings.wheel_r * (estimated_w1 + estimated_w2) / 2.0f;
                         auto w = settings.wheel_r * (estimated_w2 - estimated_w1)
                                / settings.wheel_b;
-                        return std::valarray<float>({v, w, delta_time});
-                    },
-                    [](const std::vector<std::valarray<float>>& readings) {
-                        std::valarray<float> obs(0.0f, 3);
-                        // average velocities, sum delta_time
-                        obs = std::accumulate(readings.begin(), readings.end(), obs);
-                        obs[0] /= readings.size();
-                        obs[1] /= readings.size();
-
-                        return obs;
+                        return std::valarray<float>({v, w});
                     }),
           ir_sensors(   n, "/nord/sensors/ir",
                         [settings](const IRSensors::ConstPtr& ir) {
@@ -77,17 +70,27 @@ public:
                                 line<2>(settings.ir_right_back,
                                         settings.ir_right_back + point<2>(0, -ir->right_back)),
                             });
-                        })
+                        }),
+          imu(  n, "/imu_data",
+                [settings, this](const Imu::ConstPtr& imu) {
+                    float delta_time = float((imu->header.stamp - latest_imu_time).nsec) / 1e9;
+                    latest_imu_time = imu->header.stamp;
+                    return imu->angular_velocity.z / delta_time;
+                })
     { };
 
     bool all_new()
     {
         return encoders.has_new()
-            && ir_sensors.has_new();
+            && ir_sensors.has_new()
+            && imu.has_new();
     }
 
     ros::Publisher pub;
 
-    aggregate::custom<std::valarray<float>, Encoders, std::valarray<float>> encoders;
+    aggregate::average<std::valarray<float>, Encoders> encoders;
+    aggregate::average<float, Imu> imu;
     aggregate::latest<std::array<line<2>, 6>, IRSensors> ir_sensors;
+
+    ros::Time latest_imu_time;
 };

@@ -19,13 +19,14 @@ public:
 class observation
 {
 public:
-    observation(float v, float w, const std::array<line<2>, 6>& ir, float dt)
-        : v(v), w(w), ir(ir), dt(dt) { };
+    observation(float v, float w, const std::array<line<2>, 6>& ir, float ang_z, float dt)
+        : v(v), w(w), ir(ir), ang_z(ang_z), dt(dt) { };
     observation() { };
 
     float v;
     float w;
     std::array<line<2>, 6> ir;
+    float ang_z;
     float dt;
 };
 
@@ -53,6 +54,7 @@ class forrest_filter : public dust::filter<pose, observation>
 public:
     forrest_filter(const std::array<float, 6>& alpha,
                    const std::array<range_settings, 6>& ir_theta,
+                   float imu_variance,
                    unsigned int num_particles, map& maze, const pose& init)
         : alpha(alpha), ir_theta(ir_theta), maze(maze),
           dist_x(maze.get_min_x(), maze.get_max_x()),
@@ -79,6 +81,8 @@ private:
                              const observation& obs) const;
     float rangefinder(const line<2>& r, const range_settings& theta) const;
     float map_probability(const pose& state, const pose& next) const;
+    float imu_probability(const pose& state, const pose& next,
+                          const observation& obs) const;
 
     map& maze;
 
@@ -86,6 +90,7 @@ private:
     std::array<float, 6> alpha;
     // IR parameters
     std::array<range_settings, 6> ir_theta;
+    float imu_variance;
 
     // uniform map distributions
     mutable std::uniform_real_distribution<float> dist_x;

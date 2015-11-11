@@ -77,7 +77,7 @@ int main(int argc, char** argv)
     {
         alpha[i] = std::stod(argv[1 + i]);
     }
-    // nord_estimation particle_filter 0.2 0.2 0.2 0.2 0.2 0.2 0.2 5 0.95 0.01 0.01 0.03 0.1 9 0.4 0.1 0.25 0.25 10000 reset
+    // nord_estimation particle_filter 0.2 0.2 0.2 0.2 0.2 0.2 0.2 5 0.95 0.01 0.01 0.03 0.1 9 0.4 0.1 0.25 0.25 0.05 1000 nope
     float long_sigma_hit = std::stod(argv[7]);
     float long_lambda_short = std::stod(argv[8]);
     float long_p_hit = std::stod(argv[9]);
@@ -90,8 +90,9 @@ int main(int argc, char** argv)
     float short_p_short = std::stod(argv[16]);
     float short_p_max = std::stod(argv[17]);
     float short_p_rand = std::stod(argv[18]);
-    int num_particles = std::stoi(argv[19]);
-    bool reset = std::string(argv[20]) == "reset";
+    float imu_variance = std::stod(argv[19]);
+    int num_particles = std::stoi(argv[20]);
+    bool reset = std::string(argv[21]) == "reset";
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
@@ -111,7 +112,7 @@ int main(int argc, char** argv)
                                        short_p_max, short_p_rand);
 
     map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
-    forrest_filter filter(alpha, settings_range, num_particles, maze, start_pose);
+    forrest_filter filter(alpha, settings_range, imu_variance, num_particles, maze, start_pose);
 
     // kidnapped?
     if (reset)
@@ -133,15 +134,19 @@ int main(int argc, char** argv)
     });
 
     ros::Rate r(10);
+    ros::Time last;
     while (ros::ok())
     {
         ros::spinOnce();
         // only update when all sensors have something to contribute
         if (o.all_new())
         {
+            auto current = ros::Time::now();
             std::valarray<float> encoders = o.encoders.aggregate();
             std::array<line<2>, 6> ir_sensors = o.ir_sensors.aggregate();
-            observation obs(encoders[0], encoders[1], ir_sensors, encoders[2]);
+            float imu = o.imu.aggregate();
+            observation obs(encoders[0], encoders[1], ir_sensors, imu,
+                            float((current - last).nsec) / 1e9);
             filter.update(obs);
         }
 
