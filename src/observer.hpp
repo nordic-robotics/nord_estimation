@@ -71,11 +71,9 @@ public:
                                         settings.ir_right_back + point<2>(0, -ir->right_back)),
                             });
                         }),
-          imu(  n, "/imu_data",
+          imu(  n, "/imu/data",
                 [settings, this](const Imu::ConstPtr& imu) {
-                    float delta_time = float((imu->header.stamp - latest_imu_time).nsec) / 1e9;
-                    latest_imu_time = imu->header.stamp;
-                    return imu->angular_velocity.z / delta_time;
+                    return -imu->angular_velocity.z;
                 })
     { };
 
@@ -91,6 +89,4 @@ public:
     aggregate::average<std::valarray<float>, Encoders> encoders;
     aggregate::average<float, Imu> imu;
     aggregate::latest<std::array<line<2>, 6>, IRSensors> ir_sensors;
-
-    ros::Time latest_imu_time;
 };

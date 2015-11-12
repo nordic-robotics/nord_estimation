@@ -56,7 +56,7 @@ public:
                    const std::array<range_settings, 6>& ir_theta,
                    float imu_variance,
                    unsigned int num_particles, map& maze, const pose& init)
-        : alpha(alpha), ir_theta(ir_theta), maze(maze),
+        : alpha(alpha), ir_theta(ir_theta), imu_variance(imu_variance), maze(maze),
           dist_x(maze.get_min_x(), maze.get_max_x()),
           dist_y(maze.get_min_y(), maze.get_max_y()),
           dist_theta(0, 2 * M_PI), dist_sample(-1, 1),

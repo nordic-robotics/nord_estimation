@@ -134,12 +134,12 @@ int main(int argc, char** argv)
     });
 
     ros::Rate r(10);
-    ros::Time last;
+    ros::Time last = ros::Time::now();
     while (ros::ok())
     {
         ros::spinOnce();
         // only update when all sensors have something to contribute
-        if (o.all_new())
+        if (o.all_new() || true)
         {
             auto current = ros::Time::now();
             std::valarray<float> encoders = o.encoders.aggregate();
@@ -147,7 +147,9 @@ int main(int argc, char** argv)
             float imu = o.imu.aggregate();
             observation obs(encoders[0], encoders[1], ir_sensors, imu,
                             float((current - last).nsec) / 1e9);
+	    std::cout << (float((current - last).nsec) / 1e9) << std::endl;
             filter.update(obs);
+	    last = current;
         }
 
         auto guess = estimate_pose(filter.get_particles());
