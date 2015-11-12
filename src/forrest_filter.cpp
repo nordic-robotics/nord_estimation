@@ -26,7 +26,7 @@ namespace
     float ang_diff(float a, float b)
     {
         float diff = wrap(b) - wrap(a);
-        return diff;
+        return wrap(diff);
     }
 
     // probability of the value 'a' given a zero mean and b^2 variance
@@ -167,7 +167,6 @@ float forrest_filter::map_probability(const pose& state, const pose& next) const
 float forrest_filter::imu_probability(const pose& state, const pose& next,
                                       const observation& obs) const
 {
-    std::cout << wrap(obs.ang_z * obs.dt) << " " << imu_variance << " " << state.theta << " " << next.theta << std::endl;
     return prob(wrap(obs.ang_z * obs.dt), imu_variance, ang_diff(state.theta, next.theta));
 }
 

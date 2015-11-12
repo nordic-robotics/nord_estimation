@@ -16,7 +16,8 @@ namespace aggregate
             : sub(n.subscribe<MSG>(topic, queue,
                                    [&, convert](const MSGPtr& m) {
                                        readings.push_back(convert(m));
-                                   }))
+                                   })),
+              identity(identity)
         { };
 
         T2 aggregate()

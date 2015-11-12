@@ -52,7 +52,7 @@ public:
                         auto w = settings.wheel_r * (estimated_w2 - estimated_w1)
                                / settings.wheel_b;
                         return std::valarray<float>({v, w});
-                    }),
+                    }, std::valarray<float>(0.0f, 2)),
           ir_sensors(   n, "/nord/sensors/ir",
                         [settings](const IRSensors::ConstPtr& ir) {
                             // reconstruct IR rays
@@ -74,7 +74,7 @@ public:
           imu(  n, "/imu/data",
                 [settings, this](const Imu::ConstPtr& imu) {
                     return -imu->angular_velocity.z;
-                })
+                }, 0)
     { };
 
     bool all_new()
