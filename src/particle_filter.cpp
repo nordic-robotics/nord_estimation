@@ -119,9 +119,9 @@ int main(int argc, char** argv)
         filter.reset();
 
     // positions of IR sensors
-    observer_settings settings(point<2>(0.09, 0.04), point<2>(-0.13, 0.03),
-                               point<2>(0.07, 0.09), point<2>(-0.06, 0.09),
-                               point<2>(0.07, -0.09), point<2>(-0.06, -0.09),
+    observer_settings settings(point<2>(0.082, 0.069), point<2>(-0.114, 0.05),
+                               point<2>(0.064, 0.017), point<2>(-0.114, 0.014),
+                               point<2>(0.063, -0.015), point<2>(-0.114, -0.029),
                                0.049675f, 0.2015f);
     observer o(n, settings);
 
