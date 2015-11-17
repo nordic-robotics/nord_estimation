@@ -9,13 +9,15 @@
 
 #include "lerp_vector.hpp"
 
+const float max_distance_threshold = 0.08;
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
 
     lerp_vector<std::valarray<float>> poses;
-    landmarks objects(0.1);
+    landmarks objects(max_distance_threshold);
 
     ros::Publisher object_pub = n.advertise<nord_messages::Vector2>("/nord/estimation/new_object", 10);
 
