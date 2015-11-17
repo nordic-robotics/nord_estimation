@@ -17,6 +17,8 @@ int main(int argc, char** argv)
     lerp_vector<std::valarray<float>> poses;
     landmarks objects(0.1);
 
+    ros::Publisher object_pub = n.advertise<nord_messages::Vector2>("/nord/estimation/new_object", 10);
+
     ros::Subscriber pose_sub = n.subscribe<nord_messages::PoseEstimate>(
         "/nord/estimation/gaussian", 10,
         [&](const nord_messages::PoseEstimate::ConstPtr& p) {
@@ -35,9 +37,12 @@ int main(int argc, char** argv)
                 auto object = objects.add(point<2>(c.x, c.y), pose);
 
                 if (object.first)
-                    std::cout << "new at " << object.second.get_mean() << std::endl;
-                else
-                    std::cout << "recognized at " << object.second.get_mean() << std::endl;
+                {
+                    nord_messages::Vector2 msg;
+                    msg.x = object.second.get_mean().x();
+                    msg.x = object.second.get_mean().y();
+                    object_pub.publish(msg);
+                }
             }
         });
 
