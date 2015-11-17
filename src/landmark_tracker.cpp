@@ -42,7 +42,7 @@ int main(int argc, char** argv)
                 {
                     nord_messages::Vector2 msg;
                     msg.x = object.second.get_mean().x();
-                    msg.x = object.second.get_mean().y();
+                    msg.y = object.second.get_mean().y();
                     object_pub.publish(msg);
                 }
             }

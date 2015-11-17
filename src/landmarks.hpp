@@ -39,8 +39,23 @@ public:
     {
         data.emplace_back(world_location, robot_pose);
 
-        //temp
-        mean = world_location;
+        float sum_stddev_x = 0;
+        float sum_stddev_y = 0;
+        for (auto& d : data)
+        {
+            sum_stddev_x += d.second[3];
+            sum_stddev_y += d.second[4];
+        }
+
+        float x = 0;
+        float y = 0;
+        for (auto& d : data)
+        {
+            x += (d.second[0] * d.second[3]) / sum_stddev_x;
+            y += (d.second[1] * d.second[4]) / sum_stddev_y;
+        }
+
+        mean = point<2>(x, y);
         return mean;
     }
 
