@@ -19,7 +19,8 @@ int main(int argc, char** argv)
     lerp_vector<std::valarray<float>> poses;
     landmarks objects(max_distance_threshold);
 
-    ros::Publisher object_pub = n.advertise<nord_messages::Vector2>("/nord/estimation/new_object", 10);
+    ros::Publisher obj_pub = n.advertise<nord_messages::Vector2>("/nord/estimation/new_object",
+                                                                 10);
 
     ros::Subscriber pose_sub = n.subscribe<nord_messages::PoseEstimate>(
         "/nord/estimation/gaussian", 10,
@@ -43,7 +44,7 @@ int main(int argc, char** argv)
                     nord_messages::Vector2 msg;
                     msg.x = object.second.get_mean().x();
                     msg.y = object.second.get_mean().y();
-                    object_pub.publish(msg);
+                    obj_pub.publish(msg);
                 }
             }
         });
