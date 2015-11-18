@@ -2,6 +2,10 @@
 #include "ros/package.h"
 #include "nord_messages/CoordinateArray.h"
 #include "nord_messages/PoseEstimate.h"
+#include "nord_messages/ObjectArray.h"
+#include "nord_messages/Object.h"
+#include "nord_messages/LandmarksSrv.h"
+#include "nord_messages/Features.h"
 #include "ros/package.h"
 #include "landmarks.hpp"
 #include <string>
@@ -11,16 +15,28 @@
 
 const float max_distance_threshold = 0.08;
 
+landmarks* lm_ptr;
+
+bool landmarks_service(nord_messages::LandmarksSrv::Request& req,
+            nord_messages::LandmarksSrv::Response& res)
+{
+    res.data = lm_ptr->get_objects()[req.id].get_aggregated_features();
+    return true;
+}
+
 int main(int argc, char** argv)
 {
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
 
     lerp_vector<std::valarray<float>> poses;
-    landmarks objects(max_distance_threshold);
+    landmarks lm(max_distance_threshold);
+    lm_ptr = &lm;
 
-    ros::Publisher obj_pub = n.advertise<nord_messages::Vector2>("/nord/estimation/new_object",
-                                                                 10);
+    ros::ServiceServer srv = n.advertiseService("landmarks_service", landmarks_service);
+
+    ros::Publisher obj_pub = n.advertise<nord_messages::ObjectArray>("/nord/estimation/objects",
+                                                                     10);
 
     ros::Subscriber pose_sub = n.subscribe<nord_messages::PoseEstimate>(
         "/nord/estimation/gaussian", 10,
@@ -37,16 +53,19 @@ int main(int argc, char** argv)
 
             for (auto& c : centroids->data)
             {
-                auto object = objects.add(point<2>(c.x, c.y), pose);
-
-                if (object.first)
-                {
-                    nord_messages::Vector2 msg;
-                    msg.x = object.second.get_mean().x();
-                    msg.y = object.second.get_mean().y();
-                    obj_pub.publish(msg);
-                }
+                lm.add(point<2>(c.x, c.y), pose, c.features);
             }
+
+            nord_messages::ObjectArray msg_array;
+            for (auto& o : lm.get_objects())
+            {
+                nord_messages::Object msg;
+                msg.id = o.get_id();
+                msg.x = o.get_mean().x();
+                msg.y = o.get_mean().y();
+                msg_array.data.push_back(msg);
+            }
+            obj_pub.publish(msg_array);
         });
 
     ros::spin();
