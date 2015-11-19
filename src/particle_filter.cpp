@@ -75,12 +75,12 @@ int main(int argc, char** argv)
     std::array<float, 6> alpha;
     for (unsigned i = 0; i < 6; i++)
     {
-        alpha[i] = std::stod(argv[1 + i]);
+        alpha[i] = std::stod(argv[1 + i]);//encoder variance(6)
     }
     // nord_estimation particle_filter 0.2 0.2 0.2 0.2 0.2 0.2 0.2 5 0.95 0.01 0.01 0.03 0.1 9 0.4 0.1 0.25 0.25 0.05 1000 nope
-    float long_sigma_hit = std::stod(argv[7]);
-    float long_lambda_short = std::stod(argv[8]);
-    float long_p_hit = std::stod(argv[9]);
+    float long_sigma_hit = std::stod(argv[7]);//std_dev
+    float long_lambda_short = std::stod(argv[8]);//exp parameter
+    float long_p_hit = std::stod(argv[9]);//weights need to sum to one
     float long_p_short = std::stod(argv[10]);
     float long_p_max = std::stod(argv[11]);
     float long_p_rand = std::stod(argv[12]);
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
         filter.reset();
 
     // positions of IR sensors
-    observer_settings settings(point<2>(0.082, 0.069), point<2>(-0.114, 0.05),
+    observer_settings settings(point<2>(-0.07, 0.0), point<2>(-0.114, 0.05),
                                point<2>(0.064, 0.017), point<2>(-0.114, 0.014),
                                point<2>(0.063, -0.015), point<2>(-0.114, -0.029),
                                0.049675f, 0.2015f);
@@ -152,6 +152,9 @@ int main(int argc, char** argv)
         }
 
         auto guess = estimate_pose(filter.get_particles());
+	if (std::isnan(guess.x.mean) ||std::isnan(guess.y.mean) ||std::isnan(guess.theta.mean) ){
+		exit(1);
+	}
         guess_pub.publish(guess);
 
         map_pub.publish(rviz::create_points_message(filter.get_sampled_particles()));
