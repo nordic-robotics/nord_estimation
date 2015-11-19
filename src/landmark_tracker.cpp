@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     landmarks lm(max_distance_threshold);
     lm_ptr = &lm;
 
-    ros::ServiceServer srv = n.advertiseService("landmarks_service", landmarks_service);
+    ros::ServiceServer srv = n.advertiseService("/nord/estimation/landmarks_service", landmarks_service);
 
     ros::Publisher obj_pub = n.advertise<ObjectArray>("/nord/estimation/objects", 10);
 
