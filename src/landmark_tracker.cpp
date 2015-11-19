@@ -40,7 +40,7 @@ int main(int argc, char** argv)
     ros::Publisher obj_pub = n.advertise<ObjectArray>("/nord/estimation/objects", 10);
 
     ros::Subscriber pose_sub = n.subscribe<nord_messages::PoseEstimate>(
-        "/nord/estimation/gaussian", 10,
+        "/nord/estimation/pose_estimation", 10,
         [&](const nord_messages::PoseEstimate::ConstPtr& p) {
             poses.push_back(p->stamp.toSec(),
                             std::valarray<float>({p->x.mean, p->y.mean, p->theta.mean,
@@ -51,7 +51,6 @@ int main(int argc, char** argv)
         "/nord/nord_vision/ugo", 10,
         [&](const nord_messages::CoordinateArray::ConstPtr& centroids) {
             std::valarray<float> pose = poses[centroids->header.stamp.toSec()];
-
             for (auto& c : centroids->data)
             {
                 lm.add(point<2>(c.x, c.y), pose, c.features);
@@ -68,7 +67,6 @@ int main(int argc, char** argv)
             }
             obj_pub.publish(msg_array);
         });
-
     ros::spin();
 
     return 0;

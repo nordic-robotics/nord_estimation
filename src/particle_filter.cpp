@@ -125,7 +125,7 @@ int main(int argc, char** argv)
                                0.049675f, 0.2015f);
     observer o(n, settings);
 
-    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/gaussian", 1);
+    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation", 1);
 
     auto map_msg = rviz::create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 1);
