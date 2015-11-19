@@ -26,6 +26,8 @@ bool landmarks_service(nord_messages::LandmarksSrv::Request& req,
 
 int main(int argc, char** argv)
 {
+    using nord_messages::ObjectArray;
+
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
 
@@ -35,8 +37,7 @@ int main(int argc, char** argv)
 
     ros::ServiceServer srv = n.advertiseService("landmarks_service", landmarks_service);
 
-    ros::Publisher obj_pub = n.advertise<nord_messages::ObjectArray>("/nord/estimation/objects",
-                                                                     10);
+    ros::Publisher obj_pub = n.advertise<ObjectArray>("/nord/estimation/objects", 10);
 
     ros::Subscriber pose_sub = n.subscribe<nord_messages::PoseEstimate>(
         "/nord/estimation/gaussian", 10,
@@ -56,7 +57,7 @@ int main(int argc, char** argv)
                 lm.add(point<2>(c.x, c.y), pose, c.features);
             }
 
-            nord_messages::ObjectArray msg_array;
+            ObjectArray msg_array;
             for (auto& o : lm.get_objects())
             {
                 nord_messages::Object msg;
