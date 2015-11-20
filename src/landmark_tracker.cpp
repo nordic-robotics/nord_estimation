@@ -20,6 +20,7 @@ landmarks* lm_ptr;
 bool landmarks_service(nord_messages::LandmarksSrv::Request& req,
             nord_messages::LandmarksSrv::Response& res)
 {
+    std::cout << "entered service" << std::endl;
     res.data = lm_ptr->get_objects()[req.id].get_aggregated_features();
     return true;
 }
@@ -28,7 +29,7 @@ int main(int argc, char** argv)
 {
     using nord_messages::ObjectArray;
 
-    ros::init(argc, argv, "particle_filter");
+    ros::init(argc, argv, "landmark_tracker");
     ros::NodeHandle n;
 
     lerp_vector<std::valarray<float>> poses;
@@ -48,7 +49,7 @@ int main(int argc, char** argv)
         });
 
     ros::Subscriber ugo_sub = n.subscribe<nord_messages::CoordinateArray>(
-        "/nord/nord_vision/ugo", 10,
+        "/nord/vision/ugo", 10,
         [&](const nord_messages::CoordinateArray::ConstPtr& centroids) {
             std::valarray<float> pose = poses[centroids->header.stamp.toSec()];
             for (auto& c : centroids->data)
