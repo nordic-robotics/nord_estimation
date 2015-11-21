@@ -51,8 +51,8 @@ public:
                         auto v = settings.wheel_r * (estimated_w1 + estimated_w2) / 2.0f;
                         auto w = settings.wheel_r * (estimated_w2 - estimated_w1)
                                / settings.wheel_b;
-                        return std::valarray<float>({v, w});
-                    }, std::valarray<float>(0.0f, 2)),
+                        return std::valarray<float>({v, w, estimated_w1, estimated_w2});
+                    }, std::valarray<float>(0.0f, 4)),
           ir_sensors(   n, "/nord/sensors/ir",
                         [settings](const IRSensors::ConstPtr& ir) {
                             // reconstruct IR rays

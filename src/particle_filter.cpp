@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
-    auto start_pose = pose(0.795, 0.23, 0.0);
+    auto start_pose = pose(1.01, 2.11, M_PI);
     std::array<range_settings, 6> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]
@@ -119,7 +119,7 @@ int main(int argc, char** argv)
         filter.reset();
 
     // positions of IR sensors
-    observer_settings settings(point<2>(-0.07, 0.0), point<2>(-0.114, 0.05),
+    observer_settings settings(point<2>(-0.06, 0.0), point<2>(-0.114, 0.05),
                                point<2>(0.064, 0.017), point<2>(-0.114, 0.014),
                                point<2>(0.063, -0.015), point<2>(-0.114, -0.029),
                                0.049675f, 0.2015f);
@@ -143,18 +143,22 @@ int main(int argc, char** argv)
         {
             auto current = ros::Time::now();
             std::valarray<float> encoders = o.encoders.aggregate();
+            if (encoders.size() != 4)
+                exit(1);
             std::array<line<2>, 6> ir_sensors = o.ir_sensors.aggregate();
             float imu = o.imu.aggregate();
-            observation obs(encoders[0], encoders[1], ir_sensors, imu,
-                            float((current - last).nsec) / 1e9);
+            observation obs(encoders[0], encoders[1], encoders[2], encoders[3],
+                            ir_sensors, imu, (current - last).toSec());
             filter.update(obs);
             last = current;
         }
 
         auto guess = estimate_pose(filter.get_particles());
-	if (std::isnan(guess.x.mean) ||std::isnan(guess.y.mean) ||std::isnan(guess.theta.mean) ){
-		exit(1);
-	}
+        if (std::isnan(guess.x.mean) || std::isnan(guess.y.mean) || std::isnan(guess.theta.mean))
+        {
+            std::cout << guess.x.mean << ' ' << guess.y.mean << '\n';
+            exit(1);
+        }
         guess_pub.publish(guess);
 
         map_pub.publish(rviz::create_points_message(filter.get_sampled_particles()));

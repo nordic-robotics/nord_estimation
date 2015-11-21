@@ -22,8 +22,11 @@ namespace aggregate
 
         T2 aggregate()
         {
-            if (has_new())
+            if (has_new() || first)
             {
+                if (first)
+                    readings.push_back(identity);
+                first = false;
                 latest_aggregate = aggregate_impl();
             }
             return latest_aggregate;
@@ -38,8 +41,9 @@ namespace aggregate
 
     protected:
         std::vector<T> readings;
-        T2 latest_aggregate = T2();
+        T2 latest_aggregate = T2{};
         T identity;
+        bool first = true;
 
     private:
         ros::Subscriber sub;

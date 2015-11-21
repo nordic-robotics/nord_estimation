@@ -28,6 +28,11 @@ namespace maffs
         auto variance = std::log(1.0f / r2);
 
         auto mu = std::log(z).imag();
+        if (std::isnan(mu))
+        {
+            std::cout << "mu is fucked yo" << std::endl;
+            exit(1);
+        }
 
         return {mu, std::sqrt(variance)};
     }
@@ -52,6 +57,12 @@ namespace maffs
             variance += std::pow(*it - mean, 2);
         }
         variance /= std::distance(first, last);
+
+        if (std::isnan(mean))
+        {
+            std::cout << "mean is fucked yo" << std::endl;
+            exit(1);
+        }
 
         return {mean, std::sqrt(variance)};
     }

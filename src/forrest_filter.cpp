@@ -87,7 +87,7 @@ float forrest_filter::sample(float b) const
     return b * sum / 6;
 }
 
-pose forrest_filter::motion_model(const pose& state, const observation& obs) const
+pose forrest_filter::motion_model_velocity(const pose& state, const observation& obs) const
 {
     auto v_hat = obs.v + sample(alpha[0] * std::abs(obs.v)
                               + alpha[1] * std::abs(obs.w));
@@ -103,9 +103,46 @@ pose forrest_filter::motion_model(const pose& state, const observation& obs) con
     {
         next.x += - vw * std::sin(state.theta) + vw * sin(state.theta + w_hat * obs.dt);
         next.y += + vw * std::cos(state.theta) - vw * cos(state.theta + w_hat * obs.dt);
+    if (std::isnan(vw)) { std::cout << "vw broken" << std::endl; }
     }
     next.theta += w_hat * obs.dt + gamma_hat * obs.dt;
     next.theta = wrap(next.theta);
+    if (std::isnan(next.theta)) { std::cout << "theta broken" << std::endl; }
+    if (std::isnan(next.x)) { std::cout << "x broken" << std::endl; }
+    if (std::isnan(next.y)) { std::cout << "y broken" << std::endl; }
+    if (std::isnan(v_hat)) { std::cout << "v_hat broken" << std::endl; }
+    if (std::isnan(w_hat)) { std::cout << "w_hat broken" << std::endl; }
+    if (std::isnan(obs.dt)) { std::cout << "dt broken" << std::endl; }
+
+    return next;
+}
+
+pose forrest_filter::motion_model_cool(const pose& state, const observation& obs) const
+{
+    auto l = 0.2015;
+    auto r = 0.049675;
+    auto Vr = (obs.w2 + sample(alpha[0] * std::abs(obs.w2))) * r;
+    auto Vl = (obs.w1 + sample(alpha[1] * std::abs(obs.w1))) * r;
+    auto w = (Vr - Vl) / l;
+   // std::cout << "w1,w2: " << obs.w1 << " " << obs.w2 << std::endl;
+  //  std::cout << "w,Vr,Vl: " << w << " " << Vr << " " << Vl << std::endl;
+    auto R = (l / 2.0f) * ((Vl + Vr) / (Vr - Vl));
+    if (Vr == Vl)
+        R = 0; // danger zone
+    auto ICCx = state.x - R * std::sin(state.theta);
+    auto ICCy = state.y + R * std::cos(state.theta);
+
+    auto A11 = std::cos(w * obs.dt);
+    auto A21 = std::sin(w * obs.dt);
+    auto A12 = -std::sin(w * obs.dt);
+    auto A22 = std::cos(w * obs.dt);
+    auto B1 = state.x - ICCx;
+    auto B2 = state.y - ICCy;
+
+    pose next = state;
+    next.x = B1 * A11 + B2 * A12 + ICCx;
+    next.y = B1 * A21 + B2 * A22 + ICCy;
+    next.theta = wrap(state.theta + w * obs.dt);
 
     return next;
 }
@@ -174,13 +211,13 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
                                               const observation& obs) const
 {
     std::pair<float, pose> next;
-    next.second = motion_model(state, obs);
+    next.second = motion_model_cool(state, obs);
     auto loc = point<2>(next.second.x, next.second.y);
 
     // rotate the IR sensor by current rotation and offset
     // by current position before simulating
     float p_ir_long = 1.0f;
-    for (size_t i = 0; i < 2; i++)
+    for (size_t i = 0; i < 1; i++)
     {
         p_ir_long *= rangefinder(obs.ir[i].rotated(next.second.theta) + loc, ir_theta[i]);
     }
@@ -200,6 +237,8 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
                 * p_ir_short
                 * p_maze
                 * p_imu);
+/*next.first = (p_maze
+                * p_imu);*/
     return next;
 }
 

@@ -19,12 +19,15 @@ public:
 class observation
 {
 public:
-    observation(float v, float w, const std::array<line<2>, 6>& ir, float ang_z, float dt)
-        : v(v), w(w), ir(ir), ang_z(ang_z), dt(dt) { };
+    observation(float v, float w, float w1, float w2,
+                const std::array<line<2>, 6>& ir, float ang_z, float dt)
+        : v(v), w(w), w1(w1), w2(w2), ir(ir), ang_z(ang_z), dt(dt) { };
     observation() { };
 
     float v;
     float w;
+    float w1;
+    float w2;
     std::array<line<2>, 6> ir;
     float ang_z;
     float dt;
@@ -76,7 +79,8 @@ private:
     float sample(float b2) const;
 
     // helper functions for motion and probability
-    pose motion_model(const pose& state, const observation& obs) const;
+    pose motion_model_velocity(const pose& state, const observation& obs) const;
+    pose motion_model_cool(const pose& state, const observation& obs) const;
     float motion_probability(const pose& state, const pose& next,
                              const observation& obs) const;
     float rangefinder(const line<2>& r, const range_settings& theta) const;
