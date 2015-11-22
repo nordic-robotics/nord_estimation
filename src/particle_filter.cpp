@@ -95,12 +95,13 @@ int main(int argc, char** argv)
     using nord_messages::PoseEstimate;
 
     // run like this:
-    // rosrun nord_estimation particle_filter left_encoder=0.1 right_encod=0.1 long_sigma_hit=0.005 long_lambda_short=5 long_p_hit=0.5 long_p_short=0 long_p_max=0.45 long_p_rand=0.05 short_sigma_hit=0.01 short_lambda_short=9 short_p_hit=0.5 short_p_short=0 short_p_max=0.45 short_p_rand=0.05 imu_variance=0.0001 num_particles=10000 reset=0
+    // rosrun nord_estimation particle_filter left_encoder=0.1 right_encod=0.1 long_sigma_hit=0.005 long_lambda_short=5 long_p_hit=0.5 long_p_short=0 long_p_max=0.45 long_p_rand=0.05 short_sigma_hit=0.01 short_lambda_short=9 short_p_hit=0.5 short_p_short=0 short_p_max=0.45 short_p_rand=0.05 imu_variance=0.0001 num_particles=10000 resample_period=10 reset=0
     auto params = load_params(argc, argv);
 
     std::array<double, 2> alpha({params["left_encoder"], params["right_encoder"]});
-    uint num_particles = uint(params["num_particles"]);
+    unsigned int num_particles = uint(params["num_particles"]);
     bool reset = bool(params["reset"]);
+    unsigned int resample_period = uint(params["resample_period"]);
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
@@ -147,6 +148,7 @@ int main(int argc, char** argv)
 
     ros::Rate r(10);
     ros::Time last = ros::Time::now();
+    unsigned int resample_counter = 0;
     while (ros::ok())
     {
         ros::spinOnce();
@@ -161,6 +163,12 @@ int main(int argc, char** argv)
                             ir_sensors, imu, (current - last).toSec());
             filter.update(obs);
             last = current;
+            resample_counter++;
+            if (resample_counter == resample_period)
+            {
+                resample_counter = 0;
+                filter.resample();
+            }
         }
 
         auto guess = estimate_pose(filter.get_particles());
