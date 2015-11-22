@@ -15,7 +15,7 @@ public:
     observer_settings(const point<2>& ir_front, const point<2>& ir_back,
                       const point<2>& ir_left_front, const point<2>& ir_left_back,
                       const point<2>& ir_right_front, const point<2>& ir_right_back,
-                      float wheel_r, float wheel_b)
+                      double wheel_r, double wheel_b)
         : ir_front(ir_front), ir_back(ir_back),
           ir_left_front(ir_left_front), ir_left_back(ir_left_back),
           ir_right_front(ir_right_front), ir_right_back(ir_right_back),
@@ -27,8 +27,8 @@ public:
     point<2> ir_left_back;
     point<2> ir_right_front;
     point<2> ir_right_back;
-    float wheel_r;
-    float wheel_b;
+    double wheel_r;
+    double wheel_b;
 };
 
 class observer
@@ -43,16 +43,16 @@ public:
           encoders( n, "/arduino/encoders",
                     [settings](const Encoders::ConstPtr& e) {
                         Pose2D res;
-                        float delta_time = e->timestamp / 1000.0f;
-                        float estimated_w1 = (-e->delta_encoder1 * 2 * M_PI / delta_time)
+                        double delta_time = e->timestamp / 1000.0f;
+                        double estimated_w1 = (-e->delta_encoder1 * 2 * M_PI / delta_time)
                                              / 360.0f;
-                        float estimated_w2 = (-e->delta_encoder2 * 2 * M_PI / delta_time)
+                        double estimated_w2 = (-e->delta_encoder2 * 2 * M_PI / delta_time)
                                              / 360.0f;
                         auto v = settings.wheel_r * (estimated_w1 + estimated_w2) / 2.0f;
                         auto w = settings.wheel_r * (estimated_w2 - estimated_w1)
                                / settings.wheel_b;
-                        return std::valarray<float>({v, w, estimated_w1, estimated_w2});
-                    }, std::valarray<float>(0.0f, 4)),
+                        return std::valarray<double>({v, w, estimated_w1, estimated_w2});
+                    }, std::valarray<double>(0.0f, 4)),
           ir_sensors(   n, "/nord/sensors/ir",
                         [settings](const IRSensors::ConstPtr& ir) {
                             // reconstruct IR rays
@@ -86,7 +86,7 @@ public:
 
     ros::Publisher pub;
 
-    aggregate::average<std::valarray<float>, Encoders> encoders;
-    aggregate::average<float, Imu> imu;
+    aggregate::average<std::valarray<double>, Encoders> encoders;
+    aggregate::average<double, Imu> imu;
     aggregate::latest<std::array<line<2>, 6>, IRSensors> ir_sensors;
 };

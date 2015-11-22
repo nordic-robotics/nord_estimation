@@ -19,14 +19,14 @@ map read_map(std::string filename)
     std::ifstream file(filename);
     std::string l;
     std::vector<line<2>> walls;
-    float min_x = 0, min_y = 0, max_x = 0, max_y = 0;
+    double min_x = 0, min_y = 0, max_x = 0, max_y = 0;
     while (std::getline(file, l))
     {
         std::istringstream iss(l);
         if (l[0] == '#')
             continue;
 
-        float x0, y0, x1, y1;
+        double x0, y0, x1, y1;
         iss >> x0 >> y0 >> x1 >> y1;
         min_x = std::min({min_x, x0, x1});
         min_y = std::min({min_y, y0, y1});
@@ -39,29 +39,30 @@ map read_map(std::string filename)
 }
 
 // (mean, variance) for each dimension
-nord_messages::PoseEstimate estimate_pose(const std::vector<pose>& particles) 
+nord_messages::PoseEstimate estimate_pose(const std::vector<std::pair<double, pose>>& particles) 
 {
-    std::vector<float> x;
+    std::vector<std::pair<double, double>> x;
     x.reserve(particles.size());
-    std::vector<float> y;
+    std::vector<std::pair<double, double>> y;
     y.reserve(particles.size());
-    std::vector<float> theta;
+    std::vector<std::pair<double, double>> theta;
     theta.reserve(particles.size());
 
     for (auto& p : particles)
     {
-        x.push_back(p.x);
-        y.push_back(p.y);
-        theta.push_back(p.theta);
+        x.emplace_back(p.first, p.second.x);
+        y.emplace_back(p.first, p.second.y);
+        theta.emplace_back(p.first, p.second.theta);
     }
 
     nord_messages::PoseEstimate result;
     std::tie(result.x.mean, result.x.stddev)
-        = maffs::estimate_normal_distribution(x.begin(), x.end());
+        = maffs::estimate_weighted_normal_distribution(x.begin(), x.end());
     std::tie(result.y.mean, result.y.stddev)
-        = maffs::estimate_normal_distribution(y.begin(), y.end());
+        = maffs::estimate_weighted_normal_distribution(y.begin(), y.end());
     std::tie(result.theta.mean, result.theta.stddev)
-        = maffs::estimate_wrapped_normal_distribution(theta.begin(), theta.end(), -M_PI, M_PI);
+        = maffs::estimate_weighted_wrapped_normal_distribution(theta.begin(), theta.end(),
+                                                               -M_PI, M_PI);
 
     result.stamp = ros::Time::now();
     return result;
@@ -72,25 +73,22 @@ int main(int argc, char** argv)
     using geometry_msgs::Pose2D;
     using nord_messages::PoseEstimate;
 
-    std::array<float, 6> alpha;
-    for (unsigned i = 0; i < 6; i++)
-    {
-        alpha[i] = std::stod(argv[1 + i]);//encoder variance(6)
-    }
-    // nord_estimation particle_filter 0.2 0.2 0.2 0.2 0.2 0.2 0.2 5 0.95 0.01 0.01 0.03 0.1 9 0.4 0.1 0.25 0.25 0.05 1000 nope
-    float long_sigma_hit = std::stod(argv[7]);//std_dev
-    float long_lambda_short = std::stod(argv[8]);//exp parameter
-    float long_p_hit = std::stod(argv[9]);//weights need to sum to one
-    float long_p_short = std::stod(argv[10]);
-    float long_p_max = std::stod(argv[11]);
-    float long_p_rand = std::stod(argv[12]);
-    float short_sigma_hit = std::stod(argv[13]);
-    float short_lambda_short = std::stod(argv[14]);
-    float short_p_hit = std::stod(argv[15]);
-    float short_p_short = std::stod(argv[16]);
-    float short_p_max = std::stod(argv[17]);
-    float short_p_rand = std::stod(argv[18]);
-    float imu_variance = std::stod(argv[19]);
+    std::array<double, 2> alpha;
+    alpha[0] = std::stod(argv[1]);
+    alpha[1] = std::stod(argv[2]);
+    double long_sigma_hit = std::stod(argv[7]);
+    double long_lambda_short = std::stod(argv[8]);
+    double long_p_hit = std::stod(argv[9]);
+    double long_p_short = std::stod(argv[10]);
+    double long_p_max = std::stod(argv[11]);
+    double long_p_rand = std::stod(argv[12]);
+    double short_sigma_hit = std::stod(argv[13]);
+    double short_lambda_short = std::stod(argv[14]);
+    double short_p_hit = std::stod(argv[15]);
+    double short_p_short = std::stod(argv[16]);
+    double short_p_max = std::stod(argv[17]);
+    double short_p_rand = std::stod(argv[18]);
+    double imu_variance = std::stod(argv[19]);
     int num_particles = std::stoi(argv[20]);
     bool reset = std::string(argv[21]) == "reset";
 
@@ -125,7 +123,7 @@ int main(int argc, char** argv)
                                0.049675f, 0.2015f);
     observer o(n, settings);
 
-    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/gaussian", 1);
+    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation", 1);
 
     auto map_msg = rviz::create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 1);
@@ -142,11 +140,9 @@ int main(int argc, char** argv)
         if (o.all_new())
         {
             auto current = ros::Time::now();
-            std::valarray<float> encoders = o.encoders.aggregate();
-            if (encoders.size() != 4)
-                exit(1);
+            std::valarray<double> encoders = o.encoders.aggregate();
             std::array<line<2>, 6> ir_sensors = o.ir_sensors.aggregate();
-            float imu = o.imu.aggregate();
+            double imu = o.imu.aggregate();
             observation obs(encoders[0], encoders[1], encoders[2], encoders[3],
                             ir_sensors, imu, (current - last).toSec());
             filter.update(obs);
@@ -161,7 +157,7 @@ int main(int argc, char** argv)
         }
         guess_pub.publish(guess);
 
-        map_pub.publish(rviz::create_points_message(filter.get_sampled_particles()));
+        map_pub.publish(rviz::create_points_message(filter.get_particles()));
         map_pub.publish(rviz::create_pose_message(guess));
         map_pub.publish(rviz::create_robot_message(guess, settings));
 

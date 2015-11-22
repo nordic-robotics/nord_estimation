@@ -41,10 +41,10 @@ namespace rviz
     }
 
     // draws particles with weight, blue are more likely than yellow
-    inline Marker create_points_message(std::vector<std::pair<float, pose>> pairs)
+    inline Marker create_points_message(std::vector<std::pair<double, pose>> pairs)
     {
-        float max = 0;
-        float min = 10000000000;
+        double max = 0;
+        double min = 10000000000;
         for (auto& p : pairs)
         {
             max = std::max(p.first, max);
@@ -149,9 +149,9 @@ namespace rviz
         };
 
         { // robot outline
-            float sides = 0.07;
-            float front = 0.075;
-            float back = 0.125;
+            double sides = 0.07;
+            double front = 0.075;
+            double back = 0.125;
 
             auto p0 = point<2>(-back, -sides).rotated(theta);
             auto p1 = point<2>(-back, +sides).rotated(theta);
