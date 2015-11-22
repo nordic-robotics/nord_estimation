@@ -237,8 +237,6 @@ std::pair<double, pose> forrest_filter::motion(const pose& state,
                 * p_ir_short
                 * p_maze
                 * p_imu);
-/*next.first = (p_maze
-                * p_imu);*/
     return next;
 }
 

@@ -12,6 +12,7 @@
 #include "estimate.hpp"
 #include <fstream>
 #include <sstream>
+#include <unordered_map>
 #include <string>
 
 map read_map(std::string filename)
@@ -39,7 +40,8 @@ map read_map(std::string filename)
 }
 
 // (mean, variance) for each dimension
-nord_messages::PoseEstimate estimate_pose(const std::vector<std::pair<double, pose>>& particles) 
+nord_messages::PoseEstimate
+estimate_pose(const std::vector<std::pair<double, pose>>& particles)
 {
     std::vector<std::pair<double, double>> x;
     x.reserve(particles.size());
@@ -68,29 +70,37 @@ nord_messages::PoseEstimate estimate_pose(const std::vector<std::pair<double, po
     return result;
 }
 
+auto load_params(int argc, char** argv)
+{
+    std::unordered_map<std::string, double> output;
+
+    for (int i = 1; i < argc; i++)
+    {
+        std::istringstream iss(argv[i]);
+        std::string key;
+        std::string value;
+        std::getline(iss, key, '=');
+        std::getline(iss, value, '=');
+
+        output[key] = std::stod(value);
+        std::cout << key << " = " << output[key] << std::endl;
+    }
+
+    return output;
+}
+
 int main(int argc, char** argv)
 {
     using geometry_msgs::Pose2D;
     using nord_messages::PoseEstimate;
 
-    std::array<double, 2> alpha;
-    alpha[0] = std::stod(argv[1]);
-    alpha[1] = std::stod(argv[2]);
-    double long_sigma_hit = std::stod(argv[7]);
-    double long_lambda_short = std::stod(argv[8]);
-    double long_p_hit = std::stod(argv[9]);
-    double long_p_short = std::stod(argv[10]);
-    double long_p_max = std::stod(argv[11]);
-    double long_p_rand = std::stod(argv[12]);
-    double short_sigma_hit = std::stod(argv[13]);
-    double short_lambda_short = std::stod(argv[14]);
-    double short_p_hit = std::stod(argv[15]);
-    double short_p_short = std::stod(argv[16]);
-    double short_p_max = std::stod(argv[17]);
-    double short_p_rand = std::stod(argv[18]);
-    double imu_variance = std::stod(argv[19]);
-    int num_particles = std::stoi(argv[20]);
-    bool reset = std::string(argv[21]) == "reset";
+    // run like this:
+    // rosrun nord_estimation particle_filter left_encoder=0.1 right_encod=0.1 long_sigma_hit=0.005 long_lambda_short=5 long_p_hit=0.5 long_p_short=0 long_p_max=0.45 long_p_rand=0.05 short_sigma_hit=0.01 short_lambda_short=9 short_p_hit=0.5 short_p_short=0 short_p_max=0.45 short_p_rand=0.05 imu_variance=0.0001 num_particles=10000 reset=0
+    auto params = load_params(argc, argv);
+
+    std::array<double, 2> alpha({params["left_encoder"], params["right_encoder"]});
+    uint num_particles = uint(params["num_particles"]);
+    bool reset = bool(params["reset"]);
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
@@ -98,19 +108,22 @@ int main(int argc, char** argv)
     std::array<range_settings, 6> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]
-                      = range_settings(0.7, long_sigma_hit, long_lambda_short,
-                                       long_p_hit, long_p_short,
-                                       long_p_max, long_p_rand);
+                      = range_settings(0.8, params["long_sigma_hit"],
+                                       params["long_lambda_short"],
+                                       params["long_p_hit"], params["long_p_short"],
+                                       params["long_p_max"], params["long_p_rand"]);
     // short range IR sensors
     settings_range[2] = settings_range[3]
                       = settings_range[4]
                       = settings_range[5]
-                      = range_settings(0.3, short_sigma_hit, short_lambda_short,
-                                       short_p_hit, short_p_short,
-                                       short_p_max, short_p_rand);
+                      = range_settings(0.4, params["short_sigma_hit"],
+                                       params["short_lambda_short"],
+                                       params["short_p_hit"], params["short_p_short"],
+                                       params["short_p_max"], params["short_p_rand"]);
 
     map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
-    forrest_filter filter(alpha, settings_range, imu_variance, num_particles, maze, start_pose);
+    forrest_filter filter(alpha, settings_range, params["imu_variance"],
+                          num_particles, maze, start_pose);
 
     // kidnapped?
     if (reset)
@@ -123,7 +136,8 @@ int main(int argc, char** argv)
                                0.049675f, 0.2015f);
     observer o(n, settings);
 
-    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation", 1);
+    ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation",
+                                                         10);
 
     auto map_msg = rviz::create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 1);
@@ -150,7 +164,8 @@ int main(int argc, char** argv)
         }
 
         auto guess = estimate_pose(filter.get_particles());
-        if (std::isnan(guess.x.mean) || std::isnan(guess.y.mean) || std::isnan(guess.theta.mean))
+        if (std::isnan(guess.x.mean) || std::isnan(guess.y.mean)
+         || std::isnan(guess.theta.mean))
         {
             std::cout << guess.x.mean << ' ' << guess.y.mean << '\n';
             exit(1);

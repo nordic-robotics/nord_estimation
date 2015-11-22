@@ -56,7 +56,7 @@ public:
 class forrest_filter : public dust::filter<pose, observation>
 {
 public:
-    forrest_filter(const std::array<double, 6>& alpha,
+    forrest_filter(const std::array<double, 2>& alpha,
                    const std::array<range_settings, 6>& ir_theta,
                    double imu_variance,
                    unsigned int num_particles, map& maze, const pose& init)
@@ -94,7 +94,7 @@ private:
     map& maze;
 
     // odometry parameters
-    std::array<double, 6> alpha;
+    std::array<double, 2> alpha;
     // IR parameters
     std::array<range_settings, 6> ir_theta;
     double imu_variance;
