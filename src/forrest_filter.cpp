@@ -3,14 +3,14 @@
 
 namespace
 {
-    float square(float n)
+    double square(double n)
     {
         return n * n;
     }
 
     // wrap an angle to [-pi, pi]
     // assumes the angle is not more than 2pi away from that range
-    float wrap(float angle)
+    double wrap(double angle)
     {
         if (angle < -M_PI)
         {
@@ -23,14 +23,14 @@ namespace
         return angle;
     }
 
-    float ang_diff(float a, float b)
+    double ang_diff(double a, double b)
     {
-        float diff = wrap(b) - wrap(a);
+        double diff = wrap(b) - wrap(a);
         return wrap(diff);
     }
 
     // probability of the value 'a' given a zero mean and b^2 variance
-    float prob(float a, float b2, float mu = 0)
+    double prob(double a, double b2, double mu = 0)
     {
         auto numerator = std::exp(-0.5f * square(a - mu) / b2);
         auto denominator = std::sqrt(2 * M_PI * b2);
@@ -38,7 +38,7 @@ namespace
     }
 
     // gaussian rangefinder distribution
-    float p_hit(const range_settings& theta, float z, float z_star)
+    double p_hit(const range_settings& theta, double z, double z_star)
     {
         if (0 <= z && z <= theta.z_max)
             return (std::sqrt(2 / M_PI) * std::exp(-square(z - z_star)
@@ -51,7 +51,7 @@ namespace
     }
 
     // exponential rangefinder distribution
-    float p_short(const range_settings& theta, float z, float z_star)
+    double p_short(const range_settings& theta, double z, double z_star)
     {
         if (0 <= z && z <= z_star)
             return (theta.lambda_short * std::exp(-theta.lambda_short * z))
@@ -61,13 +61,13 @@ namespace
     }
 
     // discrete rangefinder distribution
-    float p_max(const range_settings& theta, float z)
+    double p_max(const range_settings& theta, double z)
     {
-        return float(z >= theta.z_max);
+        return double(z >= theta.z_max);
     }
 
     // uniform rangefinder distribution
-    float p_rand(const range_settings& theta, float z)
+    double p_rand(const range_settings& theta, double z)
     {
         if (0 <= z && z <= theta.z_max)
             return 1.0f / theta.z_max;
@@ -77,9 +77,9 @@ namespace
 }
 
 // sample from normal distribution with zero mean and b variance
-float forrest_filter::sample(float b) const
+double forrest_filter::sample(double b) const
 {
-    float sum = 0;
+    double sum = 0;
     for (unsigned int i = 0; i < 12; i++)
     {
         sum += dist_sample(gen);
@@ -111,7 +111,7 @@ pose forrest_filter::motion_model(const pose& state, const observation& obs) con
 }
 
 // currently unused
-float forrest_filter::motion_probability(const pose& state, const pose& next,
+double forrest_filter::motion_probability(const pose& state, const pose& next,
                                          const observation& obs) const
 {
     auto mu = 0.5 * ((state.x - next.x) * std::cos(state.theta)
@@ -135,7 +135,7 @@ float forrest_filter::motion_probability(const pose& state, const pose& next,
          * prob(gamma_hat,     alpha[4] * std::abs(obs.v) + alpha[5] * std::abs(obs.w));
 }
 
-float forrest_filter::rangefinder(const line<2>& r, const range_settings& theta) const
+double forrest_filter::rangefinder(const line<2>& r, const range_settings& theta) const
 {
     // direction of the IR sensor
     auto dir = (r.end - r.start).normalized();
@@ -156,44 +156,44 @@ float forrest_filter::rangefinder(const line<2>& r, const range_settings& theta)
          + theta.z_p_rand * p_rand(theta, z);
 }
 
-float forrest_filter::map_probability(const pose& state, const pose& next) const
+double forrest_filter::map_probability(const pose& state, const pose& next) const
 {
-    auto inside = float(maze.contains(point<2>(state.x, state.y)));
+    auto inside = double(maze.contains(point<2>(state.x, state.y)));
     auto hit_wall = bool(maze.raycast(line<2>(point<2>(state.x, state.y),
                                               point<2>(next.x, next.y))));
-    return (inside * float(!hit_wall) + 0.000000001) / maze.get_area();
+    return (inside * double(!hit_wall) + 0.000000001) / maze.get_area();
 }
 
-float forrest_filter::imu_probability(const pose& state, const pose& next,
+double forrest_filter::imu_probability(const pose& state, const pose& next,
                                       const observation& obs) const
 {
     return prob(wrap(obs.ang_z * obs.dt), imu_variance, ang_diff(state.theta, next.theta));
 }
 
-std::pair<float, pose> forrest_filter::motion(const pose& state,
+std::pair<double, pose> forrest_filter::motion(const pose& state,
                                               const observation& obs) const
 {
-    std::pair<float, pose> next;
+    std::pair<double, pose> next;
     next.second = motion_model(state, obs);
     auto loc = point<2>(next.second.x, next.second.y);
 
     // rotate the IR sensor by current rotation and offset
     // by current position before simulating
-    float p_ir_long = 1.0f;
+    double p_ir_long = 1.0f;
     for (size_t i = 0; i < 2; i++)
     {
         p_ir_long *= rangefinder(obs.ir[i].rotated(next.second.theta) + loc, ir_theta[i]);
     }
 
-    float p_ir_short = 1.0f;
+    double p_ir_short = 1.0f;
     for (size_t i = 2; i < obs.ir.size(); i++)
     {
         p_ir_short *= rangefinder(obs.ir[i].rotated(next.second.theta) + loc, ir_theta[i]);
     }
 
-    float p_maze = map_probability(state, next.second);
+    double p_maze = map_probability(state, next.second);
 
-    float p_imu = imu_probability(state, next.second, obs);
+    double p_imu = imu_probability(state, next.second, obs);
 
     // should all be normalized, clear to multiply!
     next.first = (p_ir_long
@@ -206,4 +206,19 @@ std::pair<float, pose> forrest_filter::motion(const pose& state,
 pose forrest_filter::uniform() const
 {
     return pose(dist_x(gen), dist_y(gen), dist_theta(gen));
+}
+
+void forrest_filter::bump(const nord_messages::PoseEstimate& current)
+{
+    using dist_t = std::normal_distribution<double>;
+    dist_t dist;
+
+    reset(get_num_particles(), [&]() {
+        return pose(dist(gen, dist_t::param_type(current.x.mean,
+                                                 square(current.x.stddev))),
+                    dist(gen, dist_t::param_type(current.y.mean,
+                                                 square(current.y.stddev))),
+                    dist(gen, dist_t::param_type(current.theta.mean,
+                                                 square(current.theta.stddev))));
+    });
 }
