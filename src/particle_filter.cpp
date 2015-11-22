@@ -4,6 +4,7 @@
 #include "visualization_msgs/Marker.h"
 #include "geometry_msgs/Pose2D.h"
 #include "nord_messages/PoseEstimate.h"
+#include "nord_messages/Vector2.h"
 #include "map.hpp"
 #include "forrest_filter.hpp"
 #include "observer.hpp"
@@ -102,6 +103,8 @@ int main(int argc, char** argv)
     unsigned int num_particles = uint(params["num_particles"]);
     bool reset = bool(params["reset"]);
     unsigned int resample_period = uint(params["resample_period"]);
+    double bump_xy_multiplier = params["bump_xy_multiplier"];
+    double bump_theta_multiplier = params["bump_theta_multiplier"];
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
@@ -146,6 +149,13 @@ int main(int argc, char** argv)
         map_pub.publish(map_msg);
     });
 
+    PoseEstimate guess;
+
+    ros::Subscriber(n.subscribe<nord_messages::Vector2>("/nord/imu/bump", 1,
+        [&](const nord_messages::Vector2::ConstPtr& msg) {
+            filter.bump(guess, bump_xy_multiplier, bump_theta_multiplier);
+    }));
+
     ros::Rate r(10);
     ros::Time last = ros::Time::now();
     unsigned int resample_counter = 0;
@@ -171,7 +181,7 @@ int main(int argc, char** argv)
             }
         }
 
-        auto guess = estimate_pose(filter.get_particles());
+        guess = estimate_pose(filter.get_particles());
         if (std::isnan(guess.x.mean) || std::isnan(guess.y.mean)
          || std::isnan(guess.theta.mean))
         {

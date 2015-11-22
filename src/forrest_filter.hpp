@@ -68,7 +68,8 @@ public:
     {
     }
 
-    void bump(const nord_messages::PoseEstimate& last_estimate);
+    void bump(const nord_messages::PoseEstimate& last_estimate,
+              float bump_xy_multiplier, float bump_theta_multiplier);
 
 protected:
     // moves a particle forward based on an observation, returns { probability, new_state }

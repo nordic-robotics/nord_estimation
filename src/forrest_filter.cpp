@@ -245,17 +245,21 @@ pose forrest_filter::uniform() const
     return pose(dist_x(gen), dist_y(gen), dist_theta(gen));
 }
 
-void forrest_filter::bump(const nord_messages::PoseEstimate& current)
+void forrest_filter::bump(const nord_messages::PoseEstimate& current,
+                          float bump_xy_multiplier, float bump_theta_multiplier)
 {
     using dist_t = std::normal_distribution<double>;
     dist_t dist;
 
     reset(get_num_particles(), [&]() {
         return pose(dist(gen, dist_t::param_type(current.x.mean,
-                                                 square(current.x.stddev))),
+                                                 square(current.x.stddev)
+                                               * bump_xy_multiplier)),
                     dist(gen, dist_t::param_type(current.y.mean,
-                                                 square(current.y.stddev))),
+                                                 square(current.y.stddev)
+                                               * bump_xy_multiplier)),
                     dist(gen, dist_t::param_type(current.theta.mean,
-                                                 square(current.theta.stddev))));
+                                                 square(current.theta.stddev)
+                                               * bump_theta_multiplier)));
     });
 }
