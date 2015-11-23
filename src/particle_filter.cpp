@@ -127,7 +127,7 @@ int main(int argc, char** argv)
 
     map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
     forrest_filter filter(alpha, settings_range, params["imu_variance"],
-                          num_particles, maze, start_pose);
+                          num_particles, maze, 0.1, start_pose);
 
     // kidnapped?
     if (reset)

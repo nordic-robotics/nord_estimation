@@ -10,8 +10,9 @@ namespace dust
     class filter
     {
     public:
-        filter(unsigned int num_particles, const State& init)
+        filter(unsigned int num_particles, double uniform_fraction, const State& init)
             : num_particles(num_particles),
+              uniform_fraction(uniform_fraction),
               resample_dist(0, 1.0 / num_particles),
               particles(num_particles, std::make_pair(1.0 / num_particles, init))
         {
@@ -73,8 +74,19 @@ namespace dust
                     c += particles[i].first / sum;
                 }
                 resample_buffer.emplace_back(1 / num_particles, particles[i].second);
+
+                if (resample_buffer.size() > (1.0 - uniform_fraction) * num_particles)
+                {
+                    break;
+                }
             }
+
             particles = std::move(resample_buffer);
+            std::generate_n(std::back_inserter(particles), num_particles - particles.size(),
+                            [&]() {
+                                return std::make_pair(1.0 / num_particles, uniform());
+                            });
+            assert(num_particles == particles.size());
         }
 
         const std::vector<std::pair<double, State>>& get_particles() const
@@ -100,6 +112,7 @@ namespace dust
 
     private:
         unsigned int num_particles;
+        double uniform_fraction;
         std::vector<std::pair<double, State>> particles;
         std::vector<std::pair<double, State>> resample_buffer;
         std::uniform_real_distribution<double> resample_dist;

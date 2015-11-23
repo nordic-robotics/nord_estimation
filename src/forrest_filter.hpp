@@ -59,12 +59,13 @@ public:
     forrest_filter(const std::array<double, 2>& alpha,
                    const std::array<range_settings, 6>& ir_theta,
                    double imu_variance,
-                   unsigned int num_particles, map& maze, const pose& init)
+                   unsigned int num_particles, map& maze, double uniform_fraction,
+                   const pose& init)
         : alpha(alpha), ir_theta(ir_theta), imu_variance(imu_variance), maze(maze),
           dist_x(maze.get_min_x(), maze.get_max_x()),
           dist_y(maze.get_min_y(), maze.get_max_y()),
           dist_theta(0, 2 * M_PI), dist_sample(-1, 1),
-          filter(num_particles, init)
+          filter(num_particles, uniform_fraction, init)
     {
     }
 
