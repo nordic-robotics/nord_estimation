@@ -1,6 +1,7 @@
 #include "ros/ros.h"
 #include "ros/package.h"
 #include "std_msgs/Float32.h"
+#include "std_msgs/Bool.h"
 #include "visualization_msgs/Marker.h"
 #include "geometry_msgs/Pose2D.h"
 #include "nord_messages/PoseEstimate.h"
@@ -160,6 +161,12 @@ int main(int argc, char** argv)
             filter.bump(guess, bump_xy_multiplier, bump_theta_multiplier);
     }));
 
+    bool paused = false;
+    ros::Subscriber(n.subscribe<std_msgs::Bool>("/nord/estimation/pause", 1,
+        [&](const std_msgs::Bool::ConstPtr& msg) {
+            paused = msg->data;
+    }));
+
     ros::Rate r(10);
     ros::Time last = ros::Time::now();
     unsigned int resample_counter = 0;
@@ -175,13 +182,16 @@ int main(int argc, char** argv)
             double imu = o.imu.aggregate();
             observation obs(encoders[0], encoders[1], encoders[2], encoders[3],
                             ir_sensors, imu, (current - last).toSec());
-            filter.update(obs);
-            last = current;
-            resample_counter++;
-            if (resample_counter == resample_period)
+            if (!paused)
             {
-                resample_counter = 0;
-                filter.resample();
+                filter.update(obs);
+                last = current;
+                resample_counter++;
+                if (resample_counter == resample_period)
+                {
+                    resample_counter = 0;
+                    filter.resample();
+                }
             }
         }
 
