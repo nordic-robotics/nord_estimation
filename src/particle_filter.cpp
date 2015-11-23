@@ -133,6 +133,10 @@ int main(int argc, char** argv)
     if (reset)
         filter.reset();
 
+    // from forrest_filter.hpp
+    GLOBAL_INITIALIZATION_DONE = true;
+    pose p;
+
     // positions of IR sensors
     observer_settings settings(point<2>(-0.065, 0.0), point<2>(-0.125, 0.05),
                                point<2>(0.07, 0.02), point<2>(-0.125, 0.015),

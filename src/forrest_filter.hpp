@@ -5,12 +5,20 @@
 #include "map.hpp"
 #include "nord_messages/PoseEstimate.h"
 
+static bool GLOBAL_INITIALIZATION_DONE = false;
+
 class pose
 {
 public:
     pose(double x, double y, double theta)
         : x(x), y(y), theta(theta) { };
-    pose() { };
+    pose()
+    {
+        if (GLOBAL_INITIALIZATION_DONE)
+        {
+            std::cout << "WARNING: CREATED NEW DEFAULT POSE AFTER INITIALIZATION" << std::endl;
+        }
+    };
 
     double x = 0;
     double y = 0;
