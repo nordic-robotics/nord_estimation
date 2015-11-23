@@ -37,6 +37,7 @@ class observer
     using IRSensors = nord_messages::IRSensors;
     using Pose2D = geometry_msgs::Pose2D;
     using Imu = sensor_msgs::Imu;
+    using Vector2Array = nord_messages::Vector2Array;
 public:
     observer(ros::NodeHandle& n, const observer_settings& settings)
         : pub(n.advertise<geometry_msgs::Pose2D>("/nord/estimation/particle_filter", 10)),
@@ -72,9 +73,13 @@ public:
                             });
                         }),
           imu(  n, "/imu/data",
-                [settings, this](const Imu::ConstPtr& imu) {
+                [settings](const Imu::ConstPtr& imu) {
                     return -imu->angular_velocity.z;
-                }, 0)
+                }, 0),
+          primesense(   n, "/nord/pointcloud/wallsvector",
+                        [settings](const Vector2Array::ConstPtr& rays) {
+                            return *rays;
+                        })
     { };
 
     bool all_new()
@@ -89,4 +94,5 @@ public:
     aggregate::average<std::valarray<double>, Encoders> encoders;
     aggregate::average<double, Imu> imu;
     aggregate::latest<std::array<line<2>, 6>, IRSensors> ir_sensors;
+    aggregate::latest<Vector2Array, Vector2Array> primesense;
 };

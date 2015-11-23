@@ -6,6 +6,9 @@
 #include "geometry_msgs/Pose2D.h"
 #include "nord_messages/PoseEstimate.h"
 #include "nord_messages/Vector2.h"
+#include "nord_messages/Vector2Array.h"
+#include "line.hpp"
+#include <vector>
 #include "map.hpp"
 #include "forrest_filter.hpp"
 #include "observer.hpp"
@@ -16,6 +19,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <string>
+
 
 map read_map(std::string filename)
 {
@@ -49,14 +53,14 @@ estimate_pose(const std::vector<std::pair<double, pose>>& particles)
     x.reserve(particles.size());
     std::vector<std::pair<double, double>> y;
     y.reserve(particles.size());
-    std::vector<std::pair<double, double>> theta;
+    std::vector<double> theta;
     theta.reserve(particles.size());
 
     for (auto& p : particles)
     {
         x.emplace_back(p.first, p.second.x);
         y.emplace_back(p.first, p.second.y);
-        theta.emplace_back(p.first, p.second.theta);
+        theta.emplace_back(p.second.theta);
     }
 
     nord_messages::PoseEstimate result;
@@ -65,8 +69,8 @@ estimate_pose(const std::vector<std::pair<double, pose>>& particles)
     std::tie(result.y.mean, result.y.stddev)
         = maffs::estimate_weighted_normal_distribution(y.begin(), y.end());
     std::tie(result.theta.mean, result.theta.stddev)
-        = maffs::estimate_weighted_wrapped_normal_distribution(theta.begin(), theta.end(),
-                                                               -M_PI, M_PI);
+        = maffs::estimate_wrapped_normal_distribution(theta.begin(), theta.end(),
+                                                      -M_PI, M_PI);
 
     result.stamp = ros::Time::now();
     return result;
@@ -95,6 +99,7 @@ int main(int argc, char** argv)
 {
     using geometry_msgs::Pose2D;
     using nord_messages::PoseEstimate;
+    using nord_messages::Vector2Array;
 
     // run like this:
     // rosrun nord_estimation particle_filter left_encoder=0.1 right_encod=0.1 long_sigma_hit=0.005 long_lambda_short=5 long_p_hit=0.5 long_p_short=0 long_p_max=0.45 long_p_rand=0.05 short_sigma_hit=0.01 short_lambda_short=9 short_p_hit=0.5 short_p_short=0 short_p_max=0.45 short_p_rand=0.05 imu_variance=0.0001 bump_xy_multiplier=10 bump_theta_multiplier=2 num_particles=10000 resample_period=10 reset=0
@@ -102,15 +107,15 @@ int main(int argc, char** argv)
 
     std::array<double, 2> alpha({params["left_encoder"], params["right_encoder"]});
     unsigned int num_particles = uint(params["num_particles"]);
-    bool reset = bool(params["reset"]);
+    bool reset = params["reset"] > 0.1;
     unsigned int resample_period = uint(params["resample_period"]);
     double bump_xy_multiplier = params["bump_xy_multiplier"];
     double bump_theta_multiplier = params["bump_theta_multiplier"];
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
-    auto start_pose = pose(1.01, 2.11, M_PI);
-    std::array<range_settings, 6> settings_range;
+    auto start_pose = pose(1.01, 2.11, 0 * M_PI);
+    std::array<range_settings, 7> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]
                       = range_settings(0.8, params["long_sigma_hit"],
@@ -126,13 +131,23 @@ int main(int argc, char** argv)
                                        params["short_p_hit"], params["short_p_short"],
                                        params["short_p_max"], params["short_p_rand"]);
 
+    // primesense
+    settings_range[6] = range_settings(6.0, params["prime_sigma_hit"],
+                                       params["prime_lambda_short"],
+                                       params["prime_p_hit"], params["prime_p_short"],
+                                       params["prime_p_max"], params["prime_p_rand"]);
+
     map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
     forrest_filter filter(alpha, settings_range, params["imu_variance"],
-                          num_particles, maze, 0.1, start_pose);
+                          num_particles, maze, params["uniform_fraction"],
+                          params["num_primesense_rays"], start_pose);
 
     // kidnapped?
     if (reset)
+    {
+        std::cout << "help im lost" << std::endl;
         filter.reset();
+    }
 
     // from forrest_filter.hpp
     GLOBAL_INITIALIZATION_DONE = true;
@@ -155,13 +170,14 @@ int main(int argc, char** argv)
 
     PoseEstimate guess;
 
-    ros::Subscriber(n.subscribe<nord_messages::Vector2>("/nord/imu/bump", 1,
+    ros::Subscriber bump_sub(n.subscribe<nord_messages::Vector2>("/imu/bump", 1,
         [&](const nord_messages::Vector2::ConstPtr& msg) {
             filter.bump(guess, bump_xy_multiplier, bump_theta_multiplier);
+            std::cout << "BUMP!" << std::endl;
     }));
 
     bool paused = false;
-    ros::Subscriber(n.subscribe<std_msgs::Bool>("/nord/estimation/pause", 1,
+    ros::Subscriber pause_sub(n.subscribe<std_msgs::Bool>("/nord/estimation/pause", 1,
         [&](const std_msgs::Bool::ConstPtr& msg) {
             paused = msg->data;
     }));
@@ -179,17 +195,22 @@ int main(int argc, char** argv)
             std::valarray<double> encoders = o.encoders.aggregate();
             std::array<line<2>, 6> ir_sensors = o.ir_sensors.aggregate();
             double imu = o.imu.aggregate();
+            Vector2Array primesense;
+            if (o.primesense.has_new())
+                primesense = o.primesense.aggregate();
+
             observation obs(encoders[0], encoders[1], encoders[2], encoders[3],
-                            ir_sensors, imu, (current - last).toSec());
+                            ir_sensors, imu, primesense, (current - last).toSec());
             if (!paused)
             {
                 filter.update(obs);
                 last = current;
                 resample_counter++;
-                if (resample_counter == resample_period)
+                if (primesense.data.size() > 0)//resample_counter == resample_period)
                 {
-                    resample_counter = 0;
+                    //resample_counter = 0;
                     filter.resample();
+                    std::cout << "drawing rays " << resample_counter << std::endl;
                 }
             }
         }
@@ -202,6 +223,7 @@ int main(int argc, char** argv)
             exit(1);
         }
         guess_pub.publish(guess);
+        map_pub.publish(rviz::create_rays_message(filter.rays_to_draw));
 
         map_pub.publish(rviz::create_points_message(filter.get_particles()));
         map_pub.publish(rviz::create_pose_message(guess));

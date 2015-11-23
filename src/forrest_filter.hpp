@@ -4,6 +4,7 @@
 #include "line.hpp"
 #include "map.hpp"
 #include "nord_messages/PoseEstimate.h"
+#include "nord_messages/Vector2Array.h"
 
 static bool GLOBAL_INITIALIZATION_DONE = false;
 
@@ -29,8 +30,9 @@ class observation
 {
 public:
     observation(double v, double w, double w1, double w2,
-                const std::array<line<2>, 6>& ir, double ang_z, double dt)
-        : v(v), w(w), w1(w1), w2(w2), ir(ir), ang_z(ang_z), dt(dt) { };
+                const std::array<line<2>, 6>& ir, double ang_z,
+                nord_messages::Vector2Array primesense, double dt)
+        : v(v), w(w), w1(w1), w2(w2), ir(ir), ang_z(ang_z), primesense(primesense), dt(dt) { };
     observation() { };
 
     double v;
@@ -39,6 +41,7 @@ public:
     double w2;
     std::array<line<2>, 6> ir;
     double ang_z;
+    nord_messages::Vector2Array primesense;
     double dt;
 };
 
@@ -65,20 +68,23 @@ class forrest_filter : public dust::filter<pose, observation>
 {
 public:
     forrest_filter(const std::array<double, 2>& alpha,
-                   const std::array<range_settings, 6>& ir_theta,
+                   const std::array<range_settings, 7>& ir_theta,
                    double imu_variance,
                    unsigned int num_particles, map& maze, double uniform_fraction,
-                   const pose& init)
+                   unsigned int num_primesense_rays, const pose& init)
         : alpha(alpha), ir_theta(ir_theta), imu_variance(imu_variance), maze(maze),
           dist_x(maze.get_min_x(), maze.get_max_x()),
           dist_y(maze.get_min_y(), maze.get_max_y()),
           dist_theta(0, 2 * M_PI), dist_sample(-1, 1),
+          num_primesense_rays(num_primesense_rays),
           filter(num_particles, uniform_fraction, init)
     {
     }
 
     void bump(const nord_messages::PoseEstimate& last_estimate,
               float bump_xy_multiplier, float bump_theta_multiplier);
+
+    mutable std::vector<line<2>> rays_to_draw;
 
 protected:
     // moves a particle forward based on an observation, returns { probability, new_state }
@@ -100,14 +106,16 @@ private:
     double map_probability(const pose& state, const pose& next) const;
     double imu_probability(const pose& state, const pose& next,
                           const observation& obs) const;
+    double primesense_probability(const pose& state, const observation& obs) const;
 
     map& maze;
 
     // odometry parameters
     std::array<double, 2> alpha;
     // IR parameters
-    std::array<range_settings, 6> ir_theta;
+    std::array<range_settings, 7> ir_theta;
     double imu_variance;
+    unsigned int num_primesense_rays;
 
     // uniform map distributions
     mutable std::uniform_real_distribution<double> dist_x;

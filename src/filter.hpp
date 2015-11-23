@@ -3,6 +3,7 @@
 #include <random>
 #include <functional>
 #include <algorithm>
+#include <iostream>
 
 namespace dust
 {
@@ -50,9 +51,10 @@ namespace dust
             std::transform(particles.begin(), particles.end(), particles.begin(),
                            [&](const std::pair<double, State>& before) {
                                auto after = motion(before.second, z);
-                               after.first *= before.first;
+                               //after.first *= before.first;
                                return after;
                            });
+            latest_obs = z;
         }
 
         void resample()
@@ -77,7 +79,7 @@ namespace dust
                     i++;
                     c += particles[i].first / sum;
                 }
-                resample_buffer.emplace_back(1 / num_particles, particles[i].second);
+                resample_buffer.emplace_back(1.0 / num_particles, particles[i].second);
 
                 if (resample_buffer.size() > (1.0 - uniform_fraction) * num_particles)
                 {
@@ -88,7 +90,7 @@ namespace dust
             particles = std::move(resample_buffer);
             std::generate_n(std::back_inserter(particles), num_particles - particles.size(),
                             [&]() {
-                                return std::make_pair(1.0 / num_particles, uniform());
+                                return motion(uniform(), latest_obs);
                             });
             assert(num_particles == particles.size());
         }
@@ -120,5 +122,6 @@ namespace dust
         std::vector<std::pair<double, State>> particles;
         std::vector<std::pair<double, State>> resample_buffer;
         std::uniform_real_distribution<double> resample_dist;
+        Observation latest_obs;
     };
 }

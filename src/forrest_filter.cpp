@@ -174,6 +174,8 @@ double forrest_filter::motion_probability(const pose& state, const pose& next,
 
 double forrest_filter::rangefinder(const line<2>& r, const range_settings& theta) const
 {
+    if (rays_to_draw.size() < 5 + num_primesense_rays)
+        rays_to_draw.push_back(r);
     // direction of the IR sensor
     auto dir = (r.end - r.start).normalized();
     // longest possible intersection ray
@@ -207,12 +209,31 @@ double forrest_filter::imu_probability(const pose& state, const pose& next,
     return prob(wrap(obs.ang_z * obs.dt), imu_variance, ang_diff(state.theta, next.theta));
 }
 
+double forrest_filter::primesense_probability(const pose& state, const observation& obs) const
+{
+    double p = 1.0;
+    if (obs.primesense.data.size() == 0)
+        return p;
+
+    auto current = point<2>(state.x, state.y);
+    for (unsigned int i = 0; i < num_primesense_rays; i++)
+    {
+        auto vec = obs.primesense.data[uint(obs.primesense.data.size()
+                                            * (float(i) / num_primesense_rays))];
+        auto ray = line<2>(point<2>(-0.08, -0.03), point<2>(vec.x - 0.08, vec.y - 0.03)).rotated(state.theta);
+        p *= rangefinder(ray + current, ir_theta[6]);
+    }
+    return p;
+}
+
 std::pair<double, pose> forrest_filter::motion(const pose& state,
                                               const observation& obs) const
 {
     std::pair<double, pose> next;
     next.second = motion_model_cool(state, obs);
     auto loc = point<2>(next.second.x, next.second.y);
+    if (obs.primesense.data.size() > 0)
+        rays_to_draw.clear();
 
     // rotate the IR sensor by current rotation and offset
     // by current position before simulating
@@ -225,6 +246,8 @@ std::pair<double, pose> forrest_filter::motion(const pose& state,
     double p_ir_short = 1.0f;
     for (size_t i = 2; i < obs.ir.size(); i++)
     {
+        if (i == 2 || i == 4)
+            continue;
         p_ir_short *= rangefinder(obs.ir[i].rotated(next.second.theta) + loc, ir_theta[i]);
     }
 
@@ -232,11 +255,14 @@ std::pair<double, pose> forrest_filter::motion(const pose& state,
 
     double p_imu = imu_probability(state, next.second, obs);
 
+    double p_prime = primesense_probability(state, obs);
+
     // should all be normalized, clear to multiply!
-    next.first = (p_ir_long
+    next.first = (p_maze
                 * p_ir_short
-                * p_maze
-                * p_imu);
+                * p_ir_long
+                * p_imu
+                * p_prime);
     return next;
 }
 
@@ -253,13 +279,13 @@ void forrest_filter::bump(const nord_messages::PoseEstimate& current,
 
     reset(get_num_particles(), [&]() {
         return pose(dist(gen, dist_t::param_type(current.x.mean,
-                                                 square(current.x.stddev)
+                                                 current.x.stddev
                                                * bump_xy_multiplier)),
                     dist(gen, dist_t::param_type(current.y.mean,
-                                                 square(current.y.stddev)
+                                                 current.y.stddev
                                                * bump_xy_multiplier)),
                     dist(gen, dist_t::param_type(current.theta.mean,
-                                                 square(current.theta.stddev)
+                                                 current.theta.stddev
                                                * bump_theta_multiplier)));
     });
 }

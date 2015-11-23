@@ -8,7 +8,7 @@ namespace maffs
 {
     // returns (mean, stddev)
     template<class InputIt, class T = typename std::iterator_traits<InputIt>::value_type>
-    std::pair<float, float>
+    std::pair<double, double>
     estimate_wrapped_normal_distribution(InputIt first, InputIt last, T min, T max)
     {
         assert(std::distance(first, last) > 0);
@@ -25,7 +25,7 @@ namespace maffs
         z /= std::distance(first, last);
         auto r2 = std::pow(r2_cos / std::distance(first, last), 2)
                 + std::pow(r2_sin / std::distance(first, last), 2);
-        auto variance = std::log(1.0f / r2);
+        auto stddev = std::log(1.0f / r2);
 
         auto mu = std::log(z).imag();
         if (std::isnan(mu))
@@ -34,12 +34,12 @@ namespace maffs
             exit(1);
         }
 
-        return {mu, std::sqrt(variance)};
+        return {mu, stddev};
     }
 
     // returns (mean, stddev)
     template<class InputIt, class T = typename std::iterator_traits<InputIt>::value_type>
-    std::pair<float, float>
+    std::pair<double, double>
     estimate_normal_distribution(InputIt first, InputIt last)
     {
         assert(std::distance(first, last) > 0);
@@ -70,7 +70,7 @@ namespace maffs
     // returns (mean, stddev)
     template<class InputIt, class PairT = typename std::iterator_traits<InputIt>::value_type,
              class T1 = typename PairT::first_type, class T2 = typename PairT::second_type>
-    std::pair<float, float>
+    std::pair<double, double>
     estimate_weighted_wrapped_normal_distribution(InputIt first, InputIt last, T2 min, T2 max)
     {
         assert(std::distance(first, last) > 0);
@@ -83,28 +83,28 @@ namespace maffs
         {
             z += std::exp(std::complex<T2>(0, it->first * it->second));
             weight_sum += it->first;
-            r2_cos += std::cos(it->first);
-            r2_sin += std::sin(it->first);
+            r2_cos += std::cos(it->second);
+            r2_sin += std::sin(it->second);
         }
-        z /= weight_sum;
-        auto r2 = std::pow(r2_cos / weight_sum, 2)
-                + std::pow(r2_sin / weight_sum, 2);
-        auto variance = std::log(1.0f / r2);
+        //z *= std::distance(first, last);//std::complex<T2>(0, weight_sum);
+        auto r2 = std::pow(r2_cos / std::distance(first, last), 2)
+                + std::pow(r2_sin / std::distance(first, last), 2);
+        auto stddev = std::log(1.0f / r2);
 
-        auto mu = std::log(z).imag();
+        auto mu = (std::log(z).imag() / weight_sum) * std::distance(first, last);
         if (std::isnan(mu))
         {
             std::cout << "mu is fucked yo" << std::endl;
             exit(1);
         }
 
-        return {mu, std::sqrt(variance)};
+        return {mu, stddev};
     }
 
     // returns (mean, stddev)
     template<class InputIt, class PairT = typename std::iterator_traits<InputIt>::value_type,
              class T1 = typename PairT::first_type, class T2 = typename PairT::second_type>
-    std::pair<float, float>
+    std::pair<double, double>
     estimate_weighted_normal_distribution(InputIt first, InputIt last)
     {
         assert(std::distance(first, last) > 0);
@@ -125,9 +125,16 @@ namespace maffs
         }
         variance /= std::distance(first, last);
 
-        if (std::isnan(mean))
+        if (!std::isnormal(weight_sum))
+        {
+            std::cout << "weight_sum is fucked yo" << std::endl;
+            std::cout << weight_sum << std::endl;
+            exit(1);
+        }
+        if (!std::isnormal(mean) && mean != 0)
         {
             std::cout << "mean is fucked yo" << std::endl;
+            std::cout << mean << std::endl;
             exit(1);
         }
 
