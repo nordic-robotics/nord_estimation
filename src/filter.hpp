@@ -18,6 +18,7 @@ namespace dust
         {
         }
 
+        // uniform reset
         void reset()
         {
             particles.clear();
@@ -25,15 +26,17 @@ namespace dust
             std::generate_n(std::back_inserter(particles), num_particles,
                             [&]{ return std::make_pair(1.0 / num_particles, uniform()); });
         }
+        // reset to specific State
         void reset(const State& s)
         {
             std::fill(particles.begin(), particles.end(), s);
         }
+        // reset with generating function (with type State(void))
         template<class DistributionFunc>
         void reset(unsigned int new_num_particles, DistributionFunc f)
         {
             num_particles = new_num_particles;
-            resample_dist = std::uniform_real_distribution<double>(0, 1.0f / num_particles);
+            resample_dist = std::uniform_real_distribution<double>(0, 1.0 / num_particles);
             particles.clear();
             particles.reserve(num_particles);
             std::generate_n(std::back_inserter(particles), num_particles, [&]() {
@@ -41,6 +44,7 @@ namespace dust
             });
         }
 
+        // move particles according to motion model
         void update(const Observation& z)
         {
             std::transform(particles.begin(), particles.end(), particles.begin(),
