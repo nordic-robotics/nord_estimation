@@ -158,7 +158,7 @@ namespace rviz
             line_list.ns = "pf_robot_2";
             line_list.id = 5;
             line_list.color.a = line_list.color.b = 1.0;
-            line_list.color.r = line_list.color.g = 0.1;
+            line_list.color.r = line_list.color.g = 0.5;
         }
         line_list.header.frame_id = "/map";
         line_list.header.stamp = ros::Time::now();

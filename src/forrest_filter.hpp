@@ -86,7 +86,7 @@ public:
 
     mutable std::vector<line<2>> rays_to_draw;
 
-    pose motion_model_cool(const pose& state, const observation& obs) const;
+    pose motion_model_cool(const pose& state, const observation& obs, bool precise = false) const;
 protected:
     // moves a particle forward based on an observation, returns { probability, new_state }
     std::pair<double, pose> motion(const pose& state, const observation& obs) const override;

@@ -226,7 +226,7 @@ int main(int argc, char** argv)
             }
             else
             {
-                odom = filter.motion_model_cool(odom, obs);
+                odom = filter.motion_model_cool(odom, obs, true);
             }
         }
 

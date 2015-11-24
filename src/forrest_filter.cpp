@@ -117,12 +117,12 @@ pose forrest_filter::motion_model_velocity(const pose& state, const observation&
     return next;
 }
 
-pose forrest_filter::motion_model_cool(const pose& state, const observation& obs) const
+pose forrest_filter::motion_model_cool(const pose& state, const observation& obs, bool precise) const
 {
     auto l = 0.2015;
     auto r = 0.049675;
-    auto Vr = (obs.w2 + sample(alpha[0] * std::abs(obs.w2))) * r;
-    auto Vl = (obs.w1 + sample(alpha[1] * std::abs(obs.w1))) * r;
+    auto Vr = (obs.w2 + (precise ? 0 : sample(alpha[0] * std::abs(obs.w2)))) * r;
+    auto Vl = (obs.w1 + (precise ? 0 : sample(alpha[1] * std::abs(obs.w1)))) * r;
     auto w = (Vr - Vl) / l;
    // std::cout << "w1,w2: " << obs.w1 << " " << obs.w2 << std::endl;
   //  std::cout << "w,Vr,Vl: " << w << " " << Vr << " " << Vl << std::endl;
