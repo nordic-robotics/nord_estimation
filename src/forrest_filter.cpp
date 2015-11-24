@@ -200,7 +200,7 @@ double forrest_filter::map_probability(const pose& state, const pose& next) cons
     auto inside = double(maze.contains(point<2>(state.x, state.y)));
     auto hit_wall = bool(maze.raycast(line<2>(point<2>(state.x, state.y),
                                               point<2>(next.x, next.y))));
-    return (inside * double(!hit_wall) + 0.000000001) / maze.get_area();
+    return (inside * double(!hit_wall)) / maze.get_area();
 }
 
 double forrest_filter::imu_probability(const pose& state, const pose& next,
@@ -246,8 +246,6 @@ std::pair<double, pose> forrest_filter::motion(const pose& state,
     double p_ir_short = 1.0f;
     for (size_t i = 2; i < obs.ir.size(); i++)
     {
-        if (i == 2 || i == 4)
-            continue;
         p_ir_short *= rangefinder(obs.ir[i].rotated(next.second.theta) + loc, ir_theta[i]);
     }
 

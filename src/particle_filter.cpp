@@ -114,7 +114,7 @@ int main(int argc, char** argv)
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
-    auto start_pose = pose(1.01, 2.11, 0 * M_PI);
+    auto start_pose = pose(1.01, 2.11, M_PI);
     std::array<range_settings, 7> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]
@@ -206,11 +206,10 @@ int main(int argc, char** argv)
                 filter.update(obs);
                 last = current;
                 resample_counter++;
-                if (primesense.data.size() > 0)//resample_counter == resample_period)
+                if (/*primesense.data.size() > 0)*/resample_counter == resample_period)
                 {
-                    //resample_counter = 0;
+                    resample_counter = 0;
                     filter.resample();
-                    std::cout << "drawing rays " << resample_counter << std::endl;
                 }
             }
         }

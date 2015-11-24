@@ -51,7 +51,7 @@ namespace dust
             std::transform(particles.begin(), particles.end(), particles.begin(),
                            [&](const std::pair<double, State>& before) {
                                auto after = motion(before.second, z);
-                               //after.first *= before.first;
+                               after.first = (after.first + before.first)/2;
                                return after;
                            });
             latest_obs = z;
@@ -64,6 +64,11 @@ namespace dust
             {
                 sum += p.first;
             }
+
+            std::sort(particles.begin(), particles.end(),
+                [](const std::pair<double, State>& a, const std::pair<double, State>& b) {
+                    return a.first > b.first;
+                });
 
             // division by sum is to normalize sum to 1
             resample_buffer.clear();
@@ -90,7 +95,9 @@ namespace dust
             particles = std::move(resample_buffer);
             std::generate_n(std::back_inserter(particles), num_particles - particles.size(),
                             [&]() {
-                                return motion(uniform(), latest_obs);
+                                auto next = motion(uniform(), latest_obs);
+                                next.first /= 2.0;
+                                return next;
                             });
             assert(num_particles == particles.size());
         }
