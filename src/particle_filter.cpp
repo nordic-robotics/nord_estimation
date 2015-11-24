@@ -111,6 +111,7 @@ int main(int argc, char** argv)
     unsigned int resample_period = uint(params["resample_period"]);
     double bump_xy_multiplier = params["bump_xy_multiplier"];
     double bump_theta_multiplier = params["bump_theta_multiplier"];
+    double odometry_threshold = params["odometry_threshold"];
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
@@ -161,6 +162,9 @@ int main(int argc, char** argv)
 
     ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation",
                                                          10);
+    ros::Publisher odom_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation_odom",
+                                                        10);
+    pose odom;
 
     auto map_msg = rviz::create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 1);
@@ -212,9 +216,20 @@ int main(int argc, char** argv)
                     filter.resample();
                 }
             }
+            guess = estimate_pose(filter.get_particles());
+
+            if (guess.x.stddev < odometry_threshold
+             && guess.y.stddev < odometry_threshold
+             && guess.theta.stddev < odometry_threshold)
+            {
+                odom = pose(guess.x.mean, guess.y.mean, guess.theta.mean);
+            }
+            else
+            {
+                odom = filter.motion_model_cool(odom, obs);
+            }
         }
 
-        guess = estimate_pose(filter.get_particles());
         if (std::isnan(guess.x.mean) || std::isnan(guess.y.mean)
          || std::isnan(guess.theta.mean))
         {
@@ -227,6 +242,11 @@ int main(int argc, char** argv)
         map_pub.publish(rviz::create_points_message(filter.get_particles()));
         map_pub.publish(rviz::create_pose_message(guess));
         map_pub.publish(rviz::create_robot_message(guess, settings));
+        PoseEstimate odom_est;
+        odom_est.x.mean = odom.x;
+        odom_est.y.mean = odom.y;
+        odom_est.theta.mean = odom.theta;
+        map_pub.publish(rviz::create_robot_message(odom_est, settings, true));
 
         r.sleep();
     }

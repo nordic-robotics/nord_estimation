@@ -144,16 +144,24 @@ namespace rviz
 
     // draws the robot outline
     inline Marker create_robot_message(const PoseEstimate& p,
-                                       const observer_settings& settings)
+                                       const observer_settings& settings,
+                                       bool blue = false)
     {
         Marker line_list;
         line_list.id = 4;
         line_list.type = Marker::LINE_LIST;
         line_list.color.a = line_list.color.g = 1.0;
         line_list.color.r = line_list.color.b = 0.7;
+        line_list.ns = "pf_robot";
+        if (blue)
+        {
+            line_list.ns = "pf_robot_2";
+            line_list.id = 5;
+            line_list.color.a = line_list.color.b = 1.0;
+            line_list.color.r = line_list.color.g = 0.1;
+        }
         line_list.header.frame_id = "/map";
         line_list.header.stamp = ros::Time::now();
-        line_list.ns = "pf_robot";
         line_list.action = Marker::ADD;
         line_list.pose.orientation.w = 1.0;
         line_list.lifetime = ros::Duration();

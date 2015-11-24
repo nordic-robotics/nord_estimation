@@ -86,6 +86,7 @@ public:
 
     mutable std::vector<line<2>> rays_to_draw;
 
+    pose motion_model_cool(const pose& state, const observation& obs) const;
 protected:
     // moves a particle forward based on an observation, returns { probability, new_state }
     std::pair<double, pose> motion(const pose& state, const observation& obs) const override;
@@ -99,7 +100,6 @@ private:
 
     // helper functions for motion and probability
     pose motion_model_velocity(const pose& state, const observation& obs) const;
-    pose motion_model_cool(const pose& state, const observation& obs) const;
     double motion_probability(const pose& state, const pose& next,
                              const observation& obs) const;
     double rangefinder(const line<2>& r, const range_settings& theta) const;
