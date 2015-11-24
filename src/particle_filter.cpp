@@ -76,13 +76,15 @@ estimate_pose(const std::vector<std::pair<double, pose>>& particles)
     return result;
 }
 
-auto load_params(int argc, char** argv)
+auto load_params(std::string filename)
 {
     std::unordered_map<std::string, double> output;
 
-    for (int i = 1; i < argc; i++)
+    std::ifstream file(filename);
+    std::string l;
+    while (std::getline(file, l))
     {
-        std::istringstream iss(argv[i]);
+        std::istringstream iss(l);
         std::string key;
         std::string value;
         std::getline(iss, key, '=');
@@ -101,9 +103,7 @@ int main(int argc, char** argv)
     using nord_messages::PoseEstimate;
     using nord_messages::Vector2Array;
 
-    // run like this:
-    // rosrun nord_estimation particle_filter left_encoder=0.1 right_encod=0.1 long_sigma_hit=0.005 long_lambda_short=5 long_p_hit=0.5 long_p_short=0 long_p_max=0.45 long_p_rand=0.05 short_sigma_hit=0.01 short_lambda_short=9 short_p_hit=0.5 short_p_short=0 short_p_max=0.45 short_p_rand=0.05 imu_variance=0.0001 bump_xy_multiplier=10 bump_theta_multiplier=2 num_particles=10000 resample_period=10 reset=0
-    auto params = load_params(argc, argv);
+    auto params = load_params(ros::package::getPath("nord_estimation") + "/data/settings.txt");
 
     std::array<double, 2> alpha({params["left_encoder"], params["right_encoder"]});
     unsigned int num_particles = uint(params["num_particles"]);
