@@ -218,8 +218,7 @@ double forrest_filter::primesense_probability(const pose& state, const observati
     auto current = point<2>(state.x, state.y);
     for (unsigned int i = 0; i < num_primesense_rays; i++)
     {
-        auto vec = obs.primesense.data[uint(obs.primesense.data.size()
-                                            * (float(i) / num_primesense_rays))];
+        auto vec = obs.primesense.data[rand() % obs.primesense.data.size()];
         auto ray = line<2>(point<2>(-0.08, -0.03), point<2>(vec.x - 0.08, vec.y - 0.03)).rotated(state.theta);
         p *= rangefinder(ray + current, ir_theta[6]);
     }

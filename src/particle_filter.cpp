@@ -165,7 +165,7 @@ int main(int argc, char** argv)
                                                          10);
     ros::Publisher odom_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation_odom",
                                                         10);
-    pose odom;
+    pose odom = start_pose;
 
     auto map_msg = rviz::create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 10);
@@ -174,6 +174,11 @@ int main(int argc, char** argv)
     });
 
     PoseEstimate guess;
+    guess.x.mean = start_pose.x;
+    guess.y.mean = start_pose.y;
+    guess.theta.mean = start_pose.theta;
+    guess.x.stddev = guess.y.stddev = guess.theta.stddev = 0.000001;
+    guess.stamp = ros::Time::now();
 
     ros::Subscriber bump_sub(n.subscribe<nord_messages::Vector2>("/imu/bump", 1,
         [&](const nord_messages::Vector2::ConstPtr& msg) {
@@ -204,8 +209,14 @@ int main(int argc, char** argv)
             if (o.primesense.has_new())
                 primesense = o.primesense.aggregate();
 
+            auto dt = (current - last).toSec();
             observation obs(encoders[0], encoders[1], encoders[2], encoders[3],
-                            ir_sensors, imu, primesense, (current - last).toSec());
+                            ir_sensors, imu, primesense, dt);
+
+            if (dt > 0.12)
+            {
+                std::cout << "lagging behind! " << dt << std::endl;
+            }
             if (!paused)
             {
                 filter.update(obs);
@@ -240,6 +251,7 @@ int main(int argc, char** argv)
             std::cout << guess.x.mean << ' ' << guess.y.mean << '\n';
             exit(1);
         }
+        guess.stamp = ros::Time::now();
         guess_pub.publish(guess);
         map_pub.publish(rviz::create_rays_message(filter.rays_to_draw));
 
@@ -249,9 +261,10 @@ int main(int argc, char** argv)
         odom_est.x.mean = odom.x;
         odom_est.y.mean = odom.y;
         odom_est.theta.mean = odom.theta;
+        odom_est.stamp = ros::Time::now();
         map_pub.publish(rviz::create_robot_message(odom_est, settings, true));
         map_pub.publish(rviz::create_robot_message(guess, settings));
-	odom_pub.publish(odom_est);
+        odom_pub.publish(odom_est);
 
         r.sleep();
     }

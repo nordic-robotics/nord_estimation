@@ -8,14 +8,14 @@ template<class T>
 class lerp_vector
 {
 public:
-    void push_back(float time, const T& value)
+    void push_back(double time, const T& value)
     {
         assert(values.size() == 0 || time > values.back().first);
 
         values.emplace_back(time, value);
     }
 
-    T operator[](float time)
+    T operator[](double time)
     {
         for (size_t i = 0; i < values.size() - 1; i++)
         {
@@ -29,11 +29,16 @@ public:
         return values.back().second;
     }
 
-private:
-    T lerp(T a, T b, float t)
+    size_t size() const
     {
-        return (1.0f - t) * a + t * b;
+        return values.size();
     }
 
-    std::vector<std::pair<float, T>> values;
+private:
+    T lerp(T a, T b, double t)
+    {
+        return (1.0 - t) * a + t * b;
+    }
+
+    std::vector<std::pair<double, T>> values;
 };

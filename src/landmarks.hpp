@@ -10,7 +10,7 @@
 namespace
 {
     point<2> relative_to_world(const point<2>& relative_location,
-                               const std::valarray<float>& pose)
+                               const std::valarray<double>& pose)
     {
         auto c = std::cos(pose[2]);
         auto s = std::sin(pose[2]);
@@ -24,41 +24,33 @@ namespace
 class landmark
 {
 public:
-    landmark(const point<2>& relative_location, const std::valarray<float>& robot_pose,
+    landmark(const point<2>& relative_location, const std::valarray<double>& robot_pose,
              size_t id, const nord_messages::Features& features)
         : id(id)
     {
         update(relative_to_world(relative_location, robot_pose), robot_pose, features);
     };
 
-    float distance_to(const point<2>& world_location) const
+    double distance_to(const point<2>& world_location) const
     {
         return (mean - world_location).length();
     }
 
-    point<2> update(const point<2>& world_location, const std::valarray<float>& robot_pose,
+    point<2> update(const point<2>& world_location, const std::valarray<double>& robot_pose,
                     const nord_messages::Features& features)
     {
         data.emplace_back(world_location, robot_pose);
         aggregated_features.push_back(features);
 
-        float sum_confidence_x = 0;
-        float sum_confidence_y = 0;
+        double x = 0;
+        double y = 0;
         for (auto& d : data)
         {
-            sum_confidence_x += 1.0f / d.second[3];
-            sum_confidence_y += 1.0f / d.second[4];
+            x += d.first.x();
+            y += d.first.y();
         }
 
-        float x = 0;
-        float y = 0;
-        for (auto& d : data)
-        {
-            x += (d.second[0] / d.second[3]) / sum_confidence_x;
-            y += (d.second[1] / d.second[4]) / sum_confidence_y;
-        }
-
-        mean = point<2>(x, y);
+        mean = point<2>(x / data.size(), y / data.size());
         return mean;
     }
 
@@ -76,7 +68,7 @@ public:
 
 private:
     point<2> mean;
-    std::vector<std::pair<point<2>, std::valarray<float>>> data;
+    std::vector<std::pair<point<2>, std::valarray<double>>> data;
     size_t id;
     std::vector<nord_messages::Features> aggregated_features;
 };
@@ -84,11 +76,11 @@ private:
 class landmarks
 {
 public:
-    landmarks(float max_distance)
+    landmarks(double max_distance)
         : max_distance(max_distance) { };
 
     landmark& add(const point<2>& relative_location,
-                  const std::valarray<float>& robot_pose,
+                  const std::valarray<double>& robot_pose,
                   const nord_messages::Features& features)
     {
         auto world_location = relative_to_world(relative_location, robot_pose);
@@ -103,12 +95,12 @@ public:
             [&](const landmark& object) {
                 auto dist = object.distance_to(world_location);
                 if (dist > max_distance)
-                    return -1000.0f;
+                    return -1000.0;
 
                 return -dist;
             });
 
-        if (res.second == -1000.0f)
+        if (res.second == -1000.0)
         {
             objects.emplace_back(relative_location, robot_pose, objects.size(), features);
             return objects.back();
@@ -124,5 +116,5 @@ public:
 
 private:
     std::vector<landmark> objects;
-    float max_distance;
+    double max_distance;
 };
