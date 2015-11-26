@@ -42,8 +42,8 @@ public:
         data.emplace_back(world_location, robot_pose);
         aggregated_features.push_back(features);
 
-        double x = 0;
-        double y = 0;
+        float x = 0;
+        float y = 0;
         for (auto& d : data)
         {
             x += d.first.x();
@@ -57,6 +57,20 @@ public:
     void add_features(const nord_messages::Features& features)
     {
         aggregated_features.push_back(features);
+    }
+
+    std::pair<size_t, size_t> get_num_features() const
+    {
+        std::pair<size_t, size_t> num(0, 0);
+        for (auto& f : aggregated_features)
+        {
+            num.first++;
+            if (f.vfh.size() != 0)
+            {
+                num.second++;
+            }
+        }
+        return num;
     }
 
     size_t get_id() const { return id; }
@@ -112,7 +126,7 @@ public:
         }
     }
 
-    const std::vector<landmark>& get_objects() const { return objects; }
+    const std::vector<landmark>& get_objects() const { return objects; };
 
 private:
     std::vector<landmark> objects;

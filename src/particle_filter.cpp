@@ -116,7 +116,8 @@ int main(int argc, char** argv)
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
-    auto start_pose = pose(1.01, 2.11, M_PI);
+    //auto start_pose = pose(1.01, 2.11, M_PI);
+    auto start_pose = pose(0.15, 0.23, 0);
     std::array<range_settings, 7> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]
@@ -151,9 +152,6 @@ int main(int argc, char** argv)
         filter.reset();
     }
 
-    // from forrest_filter.hpp
-    GLOBAL_INITIALIZATION_DONE = true;
-
     // positions of IR sensors
     observer_settings settings(point<2>(-0.065, 0.0), point<2>(-0.125, 0.05),
                                point<2>(0.07, 0.02), point<2>(-0.125, 0.015),
@@ -166,6 +164,9 @@ int main(int argc, char** argv)
     ros::Publisher odom_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation_odom",
                                                         10);
     pose odom = start_pose;
+
+    // from forrest_filter.hpp
+    GLOBAL_INITIALIZATION_DONE = true;
 
     auto map_msg = rviz::create_map_message(maze);
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 10);

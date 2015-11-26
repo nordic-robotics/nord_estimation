@@ -14,7 +14,9 @@
 
 #include "lerp_vector.hpp"
 
-const double max_distance_threshold = 0.20;
+const double max_distance_threshold = 0.08;
+const size_t num_shape_required = 2;
+const size_t num_color_required = 8;
 
 landmarks* lm_ptr;
 
@@ -80,10 +82,6 @@ int main(int argc, char** argv)
         });
 
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 10);
-    auto map_timer = n.createTimer(ros::Duration(1), [&](const ros::TimerEvent& e) {
-        auto msg = create_points_message(lm.get_objects());
-        map_pub.publish(msg);
-    });
 
     ros::Subscriber ugo_sub = n.subscribe<nord_messages::CoordinateArray>(
         "/nord/vision/ugo", 10,
@@ -97,15 +95,24 @@ int main(int argc, char** argv)
             }
 
             ObjectArray msg_array;
+            std::vector<landmark> temp;
             for (auto& o : lm.get_objects())
             {
-                nord_messages::Object msg;
-                msg.id = o.get_id();
-                msg.x = o.get_mean().x();
-                msg.y = o.get_mean().y();
-                msg_array.data.push_back(msg);
+                auto features = o.get_num_features();
+                if (features.first > num_color_required
+                 && features.second > num_shape_required)
+                {
+                    nord_messages::Object msg;
+                    msg.id = o.get_id();
+                    msg.x = o.get_mean().x();
+                    msg.y = o.get_mean().y();
+                    msg_array.data.push_back(msg);
+                    temp.push_back(o);
+                }
             }
             obj_pub.publish(msg_array);
+            auto msg = create_points_message(temp);
+            map_pub.publish(msg);
         });
     ros::spin();
 
