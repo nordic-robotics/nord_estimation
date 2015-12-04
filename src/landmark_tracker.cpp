@@ -34,7 +34,7 @@ bool moneyshot_service(nord_messages::MoneyshotSrv::Request& req,
 {
     std::cout << "entered money shot service" << std::endl;
     // res.data = lm_ptr->get_objects()[req.id].get_aggregated_features();
-    int best_xp, best_yp, xp, yp, id, best_r, h, w, r, objId;
+    int best_xp, best_yp, xp, yp, best_r, h, w, r, objId;
     sensor_msgs::Image * moneyshot, * shot;
     for (uint i=0; i<req.ids.size();i++) {
         objId = req.ids[i];
@@ -60,7 +60,7 @@ bool moneyshot_service(nord_messages::MoneyshotSrv::Request& req,
         }
     }
 
-    
+    res.moneyshot = *moneyshot;
 
     return true;
 }
