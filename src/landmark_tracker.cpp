@@ -15,7 +15,7 @@
 
 #include "lerp_vector.hpp"
 
-const double max_distance_threshold = 0.08;
+const double max_distance_threshold = 0.04;
 const size_t num_shape_required = 2;
 const size_t num_color_required = 8;
 
@@ -145,8 +145,11 @@ int main(int argc, char** argv)
                     msg.x = o.get_mean().x();
                     msg.y = o.get_mean().y();
                     msg.nrObs = features.first + features.second;
-                    msg_array.data.push_back(msg);
                     msg.moneyshot = o.get_moneyshot();
+                    msg_array.data.push_back(msg);
+		    std::cout<<"before posting"<<std::endl;
+		    std::cout<<o.get_moneyshot().data.size()<<std::endl;
+		    std::cout<<msg.moneyshot.data.size()<<std::endl;
                     temp.push_back(o);
                 }
             }
