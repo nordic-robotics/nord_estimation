@@ -6,6 +6,7 @@
 #include "point.hpp"
 #include "argmax.hpp"
 #include "nord_messages/Features.h"
+#include "sensor_msgs/Image.h"
 
 namespace
 {
@@ -25,10 +26,11 @@ class landmark
 {
 public:
     landmark(const point<2>& relative_location, const std::valarray<double>& robot_pose,
-             size_t id, const nord_messages::Features& features)
+             size_t id, const nord_messages::Features& features,
+                    const int xi, const int yi, const sensor_msgs::Image& shot)
         : id(id)
     {
-        update(relative_to_world(relative_location, robot_pose), robot_pose, features);
+        update(relative_to_world(relative_location, robot_pose), robot_pose, features, xi, yi, shot);
     };
 
     double distance_to(const point<2>& world_location) const
@@ -37,7 +39,8 @@ public:
     }
 
     point<2> update(const point<2>& world_location, const std::valarray<double>& robot_pose,
-                    const nord_messages::Features& features)
+                    const nord_messages::Features& features,
+                    const int xi, const int yi, const sensor_msgs::Image& shot)
     {
         data.emplace_back(world_location, robot_pose);
         aggregated_features.push_back(features);
@@ -51,6 +54,24 @@ public:
         }
 
         mean = point<2>(x / data.size(), y / data.size());
+
+        // Update the moneyshot and imagecoordinates of the object
+        if ( moneyshot == NULL ) {
+            *moneyshot = shot;
+        } else {
+            // calculate the distance from the center
+            int h = shot.height/2;
+            int w = shot.width/2;
+            int r_new = (h-yi)*(h-yi) + (w-xi)*(w-xi);
+            int r_old = (h-yp)*(h-yp) + (w-xp)*(w-xp);
+            // update if the new image is more centered
+            if (r_new < r_old) {
+                *moneyshot = shot;
+                xp = xi;
+                yp = yi;
+            }
+        }
+
         return mean;
     }
 
@@ -80,11 +101,18 @@ public:
         return aggregated_features;
     }
 
+    int get_xp() const { return xp;}
+    int get_yp() const { return yp;}
+    sensor_msgs::Image * get_moneyshot() const { return moneyshot; }
+
+
 private:
     point<2> mean;
     std::vector<std::pair<point<2>, std::valarray<double>>> data;
     size_t id;
     std::vector<nord_messages::Features> aggregated_features;
+    int xp, yp;
+    sensor_msgs::Image * moneyshot;
 };
 
 class landmarks
@@ -95,13 +123,15 @@ public:
 
     landmark& add(const point<2>& relative_location,
                   const std::valarray<double>& robot_pose,
-                  const nord_messages::Features& features)
+                  const nord_messages::Features& features,
+                  const int xp, const int yp,
+                  const sensor_msgs::Image& moneyshot)
     {
         auto world_location = relative_to_world(relative_location, robot_pose);
 
         if (objects.size() == 0)
         {
-            objects.emplace_back(relative_location, robot_pose, objects.size(), features);
+            objects.emplace_back(relative_location, robot_pose, objects.size(), features, xp, yp, moneyshot);
             return objects.back();
         }
 
@@ -116,12 +146,12 @@ public:
 
         if (res.second == -1000.0)
         {
-            objects.emplace_back(relative_location, robot_pose, objects.size(), features);
+            objects.emplace_back(relative_location, robot_pose, objects.size(), features, xp, yp,  moneyshot);
             return objects.back();
         }
         else
         {
-            res.first->update(world_location, robot_pose, features);
+            res.first->update(world_location, robot_pose, features, xp, yp, moneyshot);
             return *res.first;
         }
     }

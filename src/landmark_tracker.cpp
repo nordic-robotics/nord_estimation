@@ -5,6 +5,7 @@
 #include "nord_messages/ObjectArray.h"
 #include "nord_messages/Object.h"
 #include "nord_messages/LandmarksSrv.h"
+#include "nord_messages/MoneyshotSrv.h"
 #include "nord_messages/Features.h"
 #include "ros/package.h"
 #include "landmarks.hpp"
@@ -25,6 +26,42 @@ bool landmarks_service(nord_messages::LandmarksSrv::Request& req,
 {
     std::cout << "entered service" << std::endl;
     res.data = lm_ptr->get_objects()[req.id].get_aggregated_features();
+    return true;
+}
+
+bool moneyshot_service(nord_messages::MoneyshotSrv::Request& req,
+            nord_messages::MoneyshotSrv::Response& res)
+{
+    std::cout << "entered money shot service" << std::endl;
+    // res.data = lm_ptr->get_objects()[req.id].get_aggregated_features();
+    int best_xp, best_yp, xp, yp, best_r, h, w, r, objId;
+    sensor_msgs::Image * moneyshot, * shot;
+    for (uint i=0; i<req.ids.size();i++) {
+        objId = req.ids[i];
+        if ( i == 0 ) {
+            moneyshot = lm_ptr->get_objects()[objId].get_moneyshot();
+            h = shot->height / 2;
+            w = shot->width / 2;
+            best_xp = lm_ptr->get_objects()[objId].get_xp();
+            best_yp = lm_ptr->get_objects()[objId].get_yp();
+            best_r = (h-best_yp)*(h-best_yp) + (w-best_xp)*(w-best_yp);
+        } else {
+            // calculate the distance from the center
+            xp = lm_ptr->get_objects()[objId].get_xp();
+            yp = lm_ptr->get_objects()[objId].get_yp();
+            r = (h-yp)*(h-yp) + (w-xp)*(w-xp);
+            // update if the new image is more centered
+            if ( r < best_r ) {
+                shot = lm_ptr->get_objects()[objId].get_moneyshot();
+                moneyshot = shot;
+                xp = xp;
+                yp = yp;
+            }
+        }
+    }
+
+    res.moneyshot = *moneyshot;
+
     return true;
 }
 
@@ -70,6 +107,7 @@ int main(int argc, char** argv)
     lm_ptr = &lm;
 
     ros::ServiceServer srv = n.advertiseService("/nord/estimation/landmarks_service", landmarks_service);
+    ros::ServiceServer moneyshotSrv = n.advertiseService("/nord/estimation/moneyshot_service", moneyshot_service);
 
     ros::Publisher obj_pub = n.advertise<ObjectArray>("/nord/estimation/objects", 10);
 
@@ -91,7 +129,7 @@ int main(int argc, char** argv)
             std::valarray<double> pose = poses[centroids->header.stamp.toSec()];
             for (auto& c : centroids->data)
             {
-                lm.add(point<2>(c.x, c.y), pose, c.features);
+                lm.add(point<2>(c.x, c.y), pose, c.features, c.xp, c.yp, centroids->moneyshot);
             }
 
             ObjectArray msg_array;
@@ -106,6 +144,7 @@ int main(int argc, char** argv)
                     msg.id = o.get_id();
                     msg.x = o.get_mean().x();
                     msg.y = o.get_mean().y();
+                    msg.nrObs = features.first;
                     msg_array.data.push_back(msg);
                     temp.push_back(o);
                 }
