@@ -56,8 +56,8 @@ public:
         mean = point<2>(x / data.size(), y / data.size());
 
         // Update the moneyshot and imagecoordinates of the object
-        if ( moneyshot == NULL ) {
-            *moneyshot = shot;
+        if ( moneyshot.data.size() == 0 ) {
+            moneyshot = shot;
         } else {
             // calculate the distance from the center
             int h = shot.height/2;
@@ -66,7 +66,7 @@ public:
             int r_old = (h-yp)*(h-yp) + (w-xp)*(w-xp);
             // update if the new image is more centered
             if (r_new < r_old) {
-                *moneyshot = shot;
+                moneyshot = shot;
                 xp = xi;
                 yp = yi;
             }
@@ -103,7 +103,7 @@ public:
 
     int get_xp() const { return xp;}
     int get_yp() const { return yp;}
-    sensor_msgs::Image * get_moneyshot() const { return moneyshot; }
+    const sensor_msgs::Image & get_moneyshot() const { return moneyshot; }
 
 
 private:
@@ -112,7 +112,7 @@ private:
     size_t id;
     std::vector<nord_messages::Features> aggregated_features;
     int xp, yp;
-    sensor_msgs::Image * moneyshot;
+    sensor_msgs::Image moneyshot;
 };
 
 class landmarks

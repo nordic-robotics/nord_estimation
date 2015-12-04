@@ -35,13 +35,13 @@ bool moneyshot_service(nord_messages::MoneyshotSrv::Request& req,
     std::cout << "entered money shot service" << std::endl;
     // res.data = lm_ptr->get_objects()[req.id].get_aggregated_features();
     int best_xp, best_yp, xp, yp, best_r, h, w, r, objId;
-    sensor_msgs::Image * moneyshot, * shot;
+    sensor_msgs::Image  const * moneyshot = nullptr;
     for (uint i=0; i<req.ids.size();i++) {
         objId = req.ids[i];
         if ( i == 0 ) {
-            moneyshot = lm_ptr->get_objects()[objId].get_moneyshot();
-            h = shot->height / 2;
-            w = shot->width / 2;
+            moneyshot = &lm_ptr->get_objects()[objId].get_moneyshot();
+            h = moneyshot->height / 2;
+            w = moneyshot->width / 2;
             best_xp = lm_ptr->get_objects()[objId].get_xp();
             best_yp = lm_ptr->get_objects()[objId].get_yp();
             best_r = (h-best_yp)*(h-best_yp) + (w-best_xp)*(w-best_yp);
@@ -52,8 +52,7 @@ bool moneyshot_service(nord_messages::MoneyshotSrv::Request& req,
             r = (h-yp)*(h-yp) + (w-xp)*(w-xp);
             // update if the new image is more centered
             if ( r < best_r ) {
-                shot = lm_ptr->get_objects()[objId].get_moneyshot();
-                moneyshot = shot;
+                moneyshot = &lm_ptr->get_objects()[objId].get_moneyshot();
                 xp = xp;
                 yp = yp;
             }
@@ -124,6 +123,7 @@ int main(int argc, char** argv)
     ros::Subscriber ugo_sub = n.subscribe<nord_messages::CoordinateArray>(
         "/nord/vision/ugo", 10,
         [&](const nord_messages::CoordinateArray::ConstPtr& centroids) {
+	  std::cout<<"entered ugo callback"<<std::endl;
             if (poses.size() == 0)
                 return;
             std::valarray<double> pose = poses[centroids->header.stamp.toSec()];
