@@ -144,8 +144,9 @@ int main(int argc, char** argv)
                     msg.id = o.get_id();
                     msg.x = o.get_mean().x();
                     msg.y = o.get_mean().y();
-                    msg.nrObs = features.first;
+                    msg.nrObs = features.first + features.second;
                     msg_array.data.push_back(msg);
+                    msg.moneyshot = o.get_moneyshot();
                     temp.push_back(o);
                 }
             }
