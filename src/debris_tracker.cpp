@@ -5,9 +5,13 @@
 #include "nord_messages/DebrisArray.h"
 #include "nord_messages/Debris.h"
 #include "debris.hpp"
+#include "map.hpp"
+#include "line.hpp"
 #include <string>
 #include <valarray>
 #include "visualization_msgs/Marker.h"
+#include <fstream>
+#include <sstream>
 
 #include "lerp_vector.hpp"
 
@@ -15,6 +19,30 @@ const double max_distance_threshold = 0.08;
 const size_t num_debris_required = 5;
 
 debris2* lm_ptr;
+
+map read_map(std::string filename)
+{
+    std::ifstream file(filename);
+    std::string l;
+    std::vector<line<2>> walls;
+    double min_x = 0, min_y = 0, max_x = 0, max_y = 0;
+    while (std::getline(file, l))
+    {
+        std::istringstream iss(l);
+        if (l[0] == '#')
+            continue;
+
+        double x0, y0, x1, y1;
+        iss >> x0 >> y0 >> x1 >> y1;
+        min_x = std::min({min_x, x0, x1});
+        min_y = std::min({min_y, y0, y1});
+        max_x = std::max({max_x, x0, x1});
+        max_y = std::max({max_y, y0, y1});
+        walls.push_back(line<2>(point<2>(x0, y0), point<2>(x1, y1)));
+    }
+
+    return map(walls, min_x, min_y, max_x, max_y);
+}
 
 // draws particles with weight, blue are more likely than yellow
 visualization_msgs::Marker
@@ -56,6 +84,8 @@ int main(int argc, char** argv)
     debris2 lm(max_distance_threshold);
     lm_ptr = &lm;
 
+    map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
+
     //subscribers
     ros::Subscriber pose_sub = n.subscribe<nord_messages::PoseEstimate>(
         "/nord/estimation/pose_estimation", 10,
@@ -81,10 +111,28 @@ int main(int argc, char** argv)
             DebrisArray msg_array;
             std::vector<debris> temp;
             for (auto& o : lm.get_objects())
-            {
+            {   
                 auto hull_num = o.get_num_features();
                 if (hull_num > num_debris_required)
-                {
+                {   
+                    auto temp_hull=o.get_hull();
+                    for (uint f=0; f<temp_hull.size();f++){
+                        auto point1=point<2>(pose[0],pose[1]);
+                        auto point2=point<2>(temp_hull[f].x,temp_hull[f].y);
+                        auto ray = line<2>(point1, point2);
+                        auto p = maze.raycast(ray);
+
+                        // if no collision, set to z_max, otherwise set
+                        // to distance between start and intersection point
+                        if (p){
+                            auto point3=(p.value() - point<2>(pose[0],pose[1]));
+                            temp_hull[f].x=temp_hull[f].x-point3.x();
+                            temp_hull[f].y=temp_hull[f].y-point3.y();
+
+
+                        }
+
+                    }
                     nord_messages::Debris msg;
                     msg.id = o.get_id();
                     msg.x = o.get_mean().x();
