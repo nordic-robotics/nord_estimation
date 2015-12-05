@@ -134,12 +134,14 @@ include_directories(
 # add_executable(nord_estimation_node src/nord_estimation_node.cpp)
 add_executable(particle_filter src/particle_filter.cpp src/forrest_filter.cpp src/map.cpp)
 add_executable(landmark_tracker src/landmark_tracker.cpp)
+add_executable(odometry src/odometry.cpp)
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
 # add_dependencies(nord_estimation_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(particle_filter ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 add_dependencies(landmark_tracker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(odometry ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
 # target_link_libraries(nord_estimation_node
@@ -149,6 +151,9 @@ target_link_libraries(particle_filter
   ${catkin_LIBRARIES}
 )
 target_link_libraries(landmark_tracker
+  ${catkin_LIBRARIES}
+)
+target_link_libraries(odometry
   ${catkin_LIBRARIES}
 )
 

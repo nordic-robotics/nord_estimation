@@ -15,6 +15,7 @@
 #include "aggregator.hpp"
 #include "rviz.hpp"
 #include "estimate.hpp"
+#include "std_msgs/Int64.h"
 #include <fstream>
 #include <sstream>
 #include <unordered_map>
@@ -102,6 +103,7 @@ int main(int argc, char** argv)
     using geometry_msgs::Pose2D;
     using nord_messages::PoseEstimate;
     using nord_messages::Vector2Array;
+    using ras_arduino_msgs::Encoders;
 
     auto params = load_params(ros::package::getPath("nord_estimation") + "/data/settings.txt");
 
@@ -111,13 +113,11 @@ int main(int argc, char** argv)
     unsigned int resample_period = uint(params["resample_period"]);
     double bump_xy_multiplier = params["bump_xy_multiplier"];
     double bump_theta_multiplier = params["bump_theta_multiplier"];
-    double odometry_threshold = params["odometry_threshold"];
-    double odometry_theta_threshold = params["odometry_theta_threshold"];
 
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
     //auto start_pose = pose(1.01, 2.11, M_PI);
-    auto start_pose = pose(0.15, 0.23, 0);
+    auto start_pose = pose(0.6, 0.23, M_PI/2);
     std::array<range_settings, 7> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]
@@ -125,14 +125,18 @@ int main(int argc, char** argv)
                                        params["long_lambda_short"],
                                        params["long_p_hit"], params["long_p_short"],
                                        params["long_p_max"], params["long_p_rand"]);
-    // short range IR sensors
+    // left short range IR sensors
     settings_range[2] = settings_range[3]
-                      = settings_range[4]
-                      = settings_range[5]
-                      = range_settings(0.4, params["short_sigma_hit"],
-                                       params["short_lambda_short"],
-                                       params["short_p_hit"], params["short_p_short"],
-                                       params["short_p_max"], params["short_p_rand"]);
+                      = range_settings(0.4, params["left_sigma_hit"],
+                                       params["left_lambda_short"],
+                                       params["left_p_hit"], params["left_p_short"],
+                                       params["left_p_max"], params["left_p_rand"]);
+    // right short range IR sensors
+    settings_range[4] = settings_range[5]
+                      = range_settings(0.4, params["right_sigma_hit"],
+                                       params["right_lambda_short"],
+                                       params["right_p_hit"], params["right_p_short"],
+                                       params["right_p_max"], params["right_p_rand"]);
 
     // primesense
     settings_range[6] = range_settings(6.0, params["prime_sigma_hit"],
@@ -161,9 +165,6 @@ int main(int argc, char** argv)
 
     ros::Publisher guess_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation",
                                                          10);
-    ros::Publisher odom_pub = n.advertise<PoseEstimate>("/nord/estimation/pose_estimation_odom",
-                                                        10);
-    pose odom = start_pose;
 
     // from forrest_filter.hpp
     GLOBAL_INITIALIZATION_DONE = true;
@@ -193,7 +194,13 @@ int main(int argc, char** argv)
             paused = msg->data;
     }));
 
-    ros::Rate r(10);
+    ros::Subscriber num_particles_sub(n.subscribe<std_msgs::Int64>(
+        "/nord/estimation/set_num_particles", 1,
+        [&](const std_msgs::Int64::ConstPtr& msg) {
+            filter.set_num_particles(msg->data);
+    }));
+
+    ros::Rate r(20);
     ros::Time last = ros::Time::now();
     unsigned int resample_counter = 0;
     while (ros::ok())
@@ -231,41 +238,19 @@ int main(int argc, char** argv)
             }
             guess = estimate_pose(filter.get_particles());
 
-            odom = filter.motion_model_cool(odom, obs, true);
-            if (guess.x.stddev < odometry_threshold)
+            if (std::isnan(guess.x.mean) || std::isnan(guess.y.mean)
+             || std::isnan(guess.theta.mean))
             {
-                odom.x = guess.x.mean;
+                std::cout << guess.x.mean << ' ' << guess.y.mean << '\n';
+                exit(1);
             }
-            if (guess.y.stddev < odometry_threshold)
-            {
-                odom.y = guess.y.mean;
-            }
-            if (guess.theta.stddev < odometry_theta_threshold)
-            {
-                odom.theta = guess.theta.mean;
-            }
+            guess.stamp = ros::Time::now();
+            guess_pub.publish(guess);
+            map_pub.publish(rviz::create_rays_message(filter.rays_to_draw));
+            map_pub.publish(rviz::create_points_message(filter.get_particles()));
+            map_pub.publish(rviz::create_pose_message(guess));
+            map_pub.publish(rviz::create_robot_message(guess, settings));
         }
-
-        if (std::isnan(guess.x.mean) || std::isnan(guess.y.mean)
-         || std::isnan(guess.theta.mean))
-        {
-            std::cout << guess.x.mean << ' ' << guess.y.mean << '\n';
-            exit(1);
-        }
-        guess.stamp = ros::Time::now();
-        guess_pub.publish(guess);
-        map_pub.publish(rviz::create_rays_message(filter.rays_to_draw));
-
-        map_pub.publish(rviz::create_points_message(filter.get_particles()));
-        map_pub.publish(rviz::create_pose_message(guess));
-        PoseEstimate odom_est;
-        odom_est.x.mean = odom.x;
-        odom_est.y.mean = odom.y;
-        odom_est.theta.mean = odom.theta;
-        odom_est.stamp = ros::Time::now();
-        map_pub.publish(rviz::create_robot_message(odom_est, settings, true));
-        map_pub.publish(rviz::create_robot_message(guess, settings));
-        odom_pub.publish(odom_est);
 
         r.sleep();
     }

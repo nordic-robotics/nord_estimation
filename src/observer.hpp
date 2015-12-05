@@ -42,18 +42,44 @@ public:
     observer(ros::NodeHandle& n, const observer_settings& settings)
         : pub(n.advertise<geometry_msgs::Pose2D>("/nord/estimation/particle_filter", 10)),
           encoders( n, "/arduino/encoders",
-                    [settings](const Encoders::ConstPtr& e) {
+                    [](const Encoders::ConstPtr& e) {
+                        return *e;
+                    },
+                    [settings, this](const std::vector<Encoders>& es)
+                    {
                         Pose2D res;
-                        double delta_time = e->timestamp / 1000.0f;
-                        double estimated_w1 = (-e->delta_encoder1 * 2 * M_PI / delta_time)
-                                             / 360.0f;
-                        double estimated_w2 = (-e->delta_encoder2 * 2 * M_PI / delta_time)
-                                             / 360.0f;
-                        auto v = settings.wheel_r * (estimated_w1 + estimated_w2) / 2.0f;
-                        auto w = settings.wheel_r * (estimated_w2 - estimated_w1)
-                               / settings.wheel_b;
+                        if (last_enc.timestamp == 0)
+                        {
+                            std::cout << "timestamp == 0" << std::endl;
+                            last_enc = es.back();
+                            return std::valarray<double>({0, 0, 0, 0});
+                        }
+                        int16_t delta_e1 = int16_t(es.back().encoder1)
+                                         - int16_t(last_enc.encoder1);
+                        int16_t delta_e2 = int16_t(es.back().encoder2)
+                                         - int16_t(last_enc.encoder2);
+                        double delta_time = 0;
+                        for (auto& e : es)
+                        {
+                            delta_time += e.timestamp;
+                        }
+                        delta_time /= 1000.0f;
+                        if (delta_time >= 1.0)
+                        {
+                            std::cout << "delta >= 1 " << std::endl;
+                            last_enc = es.back();
+                            return std::valarray<double>({0, 0, 0, 0});
+                        }
+                        double estimated_w1 = (-double(delta_e1) * 2 * M_PI / delta_time)
+                                            / 360.0f;
+                        double estimated_w2 = (-double(delta_e2) * 2 * M_PI / delta_time)
+                                            / 360.0f;
+                        double v = settings.wheel_r * (estimated_w1 + estimated_w2) / 2.0f;
+                        double w = settings.wheel_r * (estimated_w2 - estimated_w1)
+                                 / settings.wheel_b;
+                        last_enc = es.back();
                         return std::valarray<double>({v, w, estimated_w1, estimated_w2});
-                    }, std::valarray<double>(0.0f, 4)),
+                    }),
           ir_sensors(   n, "/nord/sensors/ir",
                         [settings](const IRSensors::ConstPtr& ir) {
                             // reconstruct IR rays
@@ -80,7 +106,7 @@ public:
                         [settings](const Vector2Array::ConstPtr& rays) {
                             return *rays;
                         })
-    { };
+    { last_enc.timestamp = 0; };
 
     bool all_new()
     {
@@ -90,8 +116,9 @@ public:
     }
 
     ros::Publisher pub;
+    Encoders last_enc;
 
-    aggregate::average<std::valarray<double>, Encoders> encoders;
+    aggregate::custom<Encoders, Encoders, std::valarray<double>> encoders;
     aggregate::average<double, Imu> imu;
     aggregate::latest<std::array<line<2>, 6>, IRSensors> ir_sensors;
     aggregate::latest<Vector2Array, Vector2Array> primesense;

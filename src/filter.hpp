@@ -112,7 +112,7 @@ namespace dust
             return num_particles;
         }
 
-        void set_num_particles(unsigned int new_num_particles) const
+        void set_num_particles(unsigned int new_num_particles)
         {
             num_particles = new_num_particles;
         }
