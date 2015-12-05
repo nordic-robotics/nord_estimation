@@ -29,10 +29,17 @@ namespace
 
     std::vector<nord_messages::Vector2>grayham(std::vector<nord_messages::Vector2> input){
         //find min in y
+        std::cout << input.size() << std::endl;
+
         auto res = studd::argmax(input.begin(), input.end(),
         [&](const nord_messages::Vector2& elem) {
                 return elem.y;
             });
+        if (res.first == input.end())
+        {
+            std::cout << "argmax failed" << std::endl;
+            exit(1);
+        }
         //swap to input[1]
         std::swap(*res.first, input[1]);
 
@@ -42,10 +49,12 @@ namespace
                 return point<2>(p.x, p.y);
             });
 
+
         //sort by polar angle with input[1]
         std::sort(points.begin(), points.end(), [&](const point<2>& a, const point<2>& b) {
             return polarangle(a-points[1]) < polarangle(b-points[1]);
         });
+
 
         points.insert(points.begin(),points.back());
 
@@ -69,17 +78,17 @@ namespace
         std::swap(points[m], points[i]);    
         }
 
+        //works
+
     std::vector<nord_messages::Vector2> output;
-    std::transform(points.begin(), points.begin()+m, std::back_inserter(output),
+    std::transform(points.begin(), points.begin()+(m - 1), std::back_inserter(output),
         [&](const point<2>& p) {
             nord_messages::Vector2 o;
             o.x=p.x();
             o.y=p.y();
             return o;
         });
-
     return output;
-    std::cout << "grayham works!?" << std::endl;
     }
 }
 

@@ -12,7 +12,7 @@
 #include "lerp_vector.hpp"
 
 const double max_distance_threshold = 0.08;
-const size_t num_debris_required = 2;
+const size_t num_debris_required = 5;
 
 debris2* lm_ptr;
 
@@ -63,12 +63,12 @@ int main(int argc, char** argv)
             poses.push_back(p->stamp.toSec(),
                             std::valarray<double>({p->x.mean, p->y.mean, p->theta.mean,
                                                   p->x.stddev, p->y.stddev, p->theta.stddev}));
-        });
+                                                          });
     //publishers
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 10);
-    auto debris_pub = n.advertise<visualization_msgs::Marker>("/nord/estimation/debris", 10);
+    auto debris_pub = n.advertise< nord_messages::DebrisArray>("/nord/estimation/debris", 10);
     ros::Subscriber ugo_sub = n.subscribe<nord_messages::CoordinateArray>(
-        "/nord/pointcloud/objects", 10,
+        "/nord/pointcloud/centroids", 10,
         [&](const nord_messages::CoordinateArray::ConstPtr& centroids) {
             if (poses.size() == 0)
                 return;
