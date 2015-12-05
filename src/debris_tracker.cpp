@@ -119,7 +119,7 @@ int main(int argc, char** argv)
                     for (uint f=0; f<temp_hull.size();f++){
                         auto point1=point<2>(pose[0],pose[1]);
                         auto point2=point<2>(temp_hull[f].x,temp_hull[f].y);
-                        auto ray = line<2>(point1, point2);
+                        line<2> ray = line<2>(point1, point2);
                         auto p = maze.raycast(ray);
 
                         // if no collision, set to z_max, otherwise set
