@@ -10,7 +10,9 @@ class lerp_vector
 public:
     void push_back(double time, const T& value)
     {
-        assert(values.size() == 0 || time > values.back().first);
+        if(!(values.size() == 0 || time > values.back().first)){
+            return;
+        }
 
         values.emplace_back(time, value);
     }

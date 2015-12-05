@@ -7,7 +7,6 @@
 #include "nord_messages/LandmarksSrv.h"
 #include "nord_messages/MoneyshotSrv.h"
 #include "nord_messages/Features.h"
-#include "ros/package.h"
 #include "landmarks.hpp"
 #include <string>
 #include <valarray>
