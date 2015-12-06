@@ -19,11 +19,11 @@ namespace
                         relative_location.x() * s + relative_location.y() * c);
     }
 
-    float ccw(point<2> p1, point<2> p2, point<2> p3){
+    float ccw(const point<2>& p1, const point<2>& p2, const point<2>& p3) const {
         return (p2.x() - p1.x())*(p3.y() - p1.y()) - (p2.y() - p1.y())*(p3.x() - p1.x());
     }
 
-    float polarangle(const point<2> diff){
+    float polarangle(const point<2>& diff) const {
         return std::atan2(diff.y(),diff.x());
     }
 
@@ -74,8 +74,8 @@ namespace
                     i+=1;
                 }
             }
-        m+=1;
-        std::swap(points[m], points[i]);    
+            m+=1;
+            std::swap(points[m], points[i]);    
         }
 
         //works
