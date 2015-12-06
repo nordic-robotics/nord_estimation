@@ -20,6 +20,8 @@ const size_t num_color_required = 8;
 
 landmarks* lm_ptr;
 
+
+
 bool landmarks_service(nord_messages::LandmarksSrv::Request& req,
             nord_messages::LandmarksSrv::Response& res)
 {
@@ -97,6 +99,8 @@ int main(int argc, char** argv)
 {
     using nord_messages::ObjectArray;
 
+
+
     ros::init(argc, argv, "landmark_tracker");
     ros::NodeHandle n;
 
@@ -145,6 +149,8 @@ int main(int argc, char** argv)
                     msg.id = o.get_id();
                     msg.x = o.get_mean().x();
                     msg.y = o.get_mean().y();
+                    msg.xp = o.get_xp();
+                    msg.yp = o.get_yp();
                     msg.nrObs = features.first + features.second;
                     msg.moneyshot = o.get_moneyshot();
                     msg_array.data.push_back(msg);

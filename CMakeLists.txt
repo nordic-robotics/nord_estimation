@@ -133,7 +133,7 @@ include_directories(
 ## Declare a C++ executable
 # add_executable(nord_estimation_node src/nord_estimation_node.cpp)
 add_executable(particle_filter src/particle_filter.cpp src/forrest_filter.cpp src/map.cpp)
-add_executable(landmark_tracker src/landmark_tracker.cpp)
+add_executable(landmark_tracker src/landmark_tracker.cpp src/map.cpp)
 add_executable(odometry src/odometry.cpp)
 add_executable(debris_tracker src/debris_tracker.cpp)
 

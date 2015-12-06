@@ -4,9 +4,40 @@
 #include <string>
 #include <valarray>
 #include "point.hpp"
+#include "map.hpp"
 #include "argmax.hpp"
 #include "nord_messages/Features.h"
 #include "sensor_msgs/Image.h"
+#include <fstream>
+
+
+
+map read_map(std::string filename)
+{
+    std::ifstream file(filename);
+    std::string l;
+    std::vector<line<2>> walls;
+    double min_x = 0, min_y = 0, max_x = 0, max_y = 0;
+    while (std::getline(file, l))
+    {
+        std::istringstream iss(l);
+        if (l[0] == '#')
+            continue;
+
+        double x0, y0, x1, y1;
+        iss >> x0 >> y0 >> x1 >> y1;
+        min_x = std::min({min_x, x0, x1});
+        min_y = std::min({min_y, y0, y1});
+        max_x = std::max({max_x, x0, x1});
+        max_y = std::max({max_y, y0, y1});
+        walls.push_back(line<2>(point<2>(x0, y0), point<2>(x1, y1)));
+    }
+
+    return map(walls, min_x, min_y, max_x, max_y);
+}
+// ACHTUNG!!is this where this should be done?
+map maze =  read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
+
 
 namespace
 {
@@ -38,11 +69,31 @@ public:
         return (mean - world_location).length();
     }
 
+
+
+    point<2> pushThroughWalls(const point<2>& world_location, const std::valarray<double>& robot_pose) {
+        // 
+        point<2> robot_point = point<2>(robot_pose[0],robot_pose[1]);
+        // Ray from the robot to the object
+        line<2> ray = line<2>(robot_point, world_location);
+        auto p = maze.raycast(ray);
+        point<2> final_location;
+        // If the ray collided we push the coordinate towards the robot
+        if (p) {
+            final_location = p.value() - (ray.end - ray.start).normalized() * 0.02;
+        } else {
+            final_location = world_location;
+        }
+        return final_location;
+    }
+    
+
     point<2> update(const point<2>& world_location, const std::valarray<double>& robot_pose,
                     const nord_messages::Features& features,
                     const int xi, const int yi, const sensor_msgs::Image& shot)
     {
-        data.emplace_back(world_location, robot_pose);
+        point<2> new_world_location = pushThroughWalls(world_location, robot_pose);
+        data.emplace_back(new_world_location, robot_pose);
         aggregated_features.push_back(features);
 
         float x = 0;
