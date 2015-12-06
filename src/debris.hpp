@@ -29,8 +29,6 @@ namespace
 
     std::vector<nord_messages::Vector2>grayham(std::vector<nord_messages::Vector2> input){
         //find min in y
-        std::cout << input.size() << std::endl;
-
         auto res = studd::argmax(input.begin(), input.end(),
         [&](const nord_messages::Vector2& elem) {
                 return elem.y;
@@ -80,6 +78,12 @@ namespace
 
         //works
 
+        std::cout << " m size" << m << std::endl;
+        std::cout << "input size" << input.size() << std::endl;
+        std::cout << "points size" << points.size() << std::endl;
+
+
+
     std::vector<nord_messages::Vector2> output;
     std::transform(points.begin(), points.begin()+(m - 1), std::back_inserter(output),
         [&](const point<2>& p) {
@@ -88,6 +92,8 @@ namespace
             o.y=p.y();
             return o;
         });
+    std::cout << "output size" << output.size() << std::endl;
+
     return output;
     }
 }

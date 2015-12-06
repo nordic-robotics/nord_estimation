@@ -110,29 +110,34 @@ int main(int argc, char** argv)
 
             DebrisArray msg_array;
             std::vector<debris> temp;
+            point<2> max;
             for (auto& o : lm.get_objects())
             {   
+                auto temp_hull=o.get_hull();
+                point<2> max;
+                //find max offset through wall
+                for (uint f=0; f<temp_hull.size();f++){
+                    auto point1=point<2>(pose[0],pose[1]);
+                    auto point2=point<2>(temp_hull[f].x,temp_hull[f].y);
+                    line<2> ray = line<2>(point1, point2);
+                    auto p = maze.raycast(ray);
+                    if (p){
+                        auto point3=p.value() - point<2>(pose[0],pose[1]);
+                        if (point3.length()>max.length()){
+                            max=point3;
+                        }
+                    }
+
+                }
+                //move all of object to this side of the wall                
+                for (uint l=0; l<temp_hull.size();l++){
+                    temp_hull[l].x=temp_hull[l].x-max.length();
+                    temp_hull[l].y=temp_hull[l].y-max.length();
+                }
+                //if we have seen object enough times. post it
                 auto hull_num = o.get_num_features();
                 if (hull_num > num_debris_required)
                 {   
-                    auto temp_hull=o.get_hull();
-                    for (uint f=0; f<temp_hull.size();f++){
-                        auto point1=point<2>(pose[0],pose[1]);
-                        auto point2=point<2>(temp_hull[f].x,temp_hull[f].y);
-                        auto ray = line<2>(point1, point2);
-                        auto p = maze.raycast(ray);
-
-                        // if no collision, set to z_max, otherwise set
-                        // to distance between start and intersection point
-                        if (p){
-                            auto point3=(p.value() - point<2>(pose[0],pose[1]));
-                            temp_hull[f].x=temp_hull[f].x-point3.x();
-                            temp_hull[f].y=temp_hull[f].y-point3.y();
-
-
-                        }
-
-                    }
                     nord_messages::Debris msg;
                     msg.id = o.get_id();
                     msg.x = o.get_mean().x();
