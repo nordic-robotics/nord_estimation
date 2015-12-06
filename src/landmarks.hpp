@@ -13,8 +13,8 @@ namespace
     point<2> relative_to_world(const point<2>& relative_location,
                                const std::valarray<double>& pose)
     {
-        auto c = std::cos(pose[2]);
-        auto s = std::sin(pose[2]);
+        auto c = pose[6];
+        auto s = pose[7];
 
         return point<2>(pose[0], pose[1])
              + point<2>(relative_location.x() * c - relative_location.y() * s,

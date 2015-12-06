@@ -114,7 +114,9 @@ int main(int argc, char** argv)
         [&](const nord_messages::PoseEstimate::ConstPtr& p) {
             poses.push_back(p->stamp.toSec(),
                             std::valarray<double>({p->x.mean, p->y.mean, p->theta.mean,
-                                                  p->x.stddev, p->y.stddev, p->theta.stddev}));
+                                                   p->x.stddev, p->y.stddev, p->theta.stddev,
+                                                   std::cos(p->theta.mean),
+                                                   std::sin(p->theta.mean)}));
         });
 
     auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 10);
