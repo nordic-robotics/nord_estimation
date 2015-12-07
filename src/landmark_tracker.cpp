@@ -14,7 +14,7 @@
 
 #include "lerp_vector.hpp"
 
-const double max_distance_threshold = 0.04;
+const double max_distance_threshold = 0.06;
 const size_t num_shape_required = 2;
 const size_t num_color_required = 8;
 

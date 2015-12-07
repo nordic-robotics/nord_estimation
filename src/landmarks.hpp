@@ -109,6 +109,8 @@ public:
         // Update the moneyshot and imagecoordinates of the object
         if ( moneyshot.data.size() == 0 ) {
             moneyshot = shot;
+            xp = xi;
+            yp = yi;
         } else {
             // calculate the distance from the center
             int h = shot.height/2;

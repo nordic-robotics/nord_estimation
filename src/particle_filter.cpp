@@ -117,7 +117,7 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
     //auto start_pose = pose(1.01, 2.11, M_PI);
-    auto start_pose = pose(0.6, 0.23, M_PI/2);
+    auto start_pose = pose(0.15, 0.23, 0);
     std::array<range_settings, 7> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]

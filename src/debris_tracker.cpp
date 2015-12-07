@@ -3,6 +3,7 @@
 #include "nord_messages/CoordinateArray.h"
 #include "nord_messages/PoseEstimate.h"
 #include "nord_messages/DebrisArray.h"
+#include "nord_messages/Vector2.h"
 #include "nord_messages/Debris.h"
 #include "debris.hpp"
 #include "map.hpp"
@@ -15,10 +16,62 @@
 
 #include "lerp_vector.hpp"
 
-const double max_distance_threshold = 0.08;
-const size_t num_debris_required = 5;
+const double max_distance_threshold = 0.1;
+const size_t num_debris_required = 10;
+ros::Publisher map_pub;
 
 debris2* lm_ptr;
+
+float area(std::vector<nord_messages::Vector2> input){
+    int b=0;
+    float temp=0;
+    float Area=0;
+    for(uint a = 0; a < input.size(); a++){
+        b = ((a+1) % input.size());
+        temp = (input[a].x*input[b].y)-(input[b].x*input[a].y);
+        Area = Area + temp;
+    }
+return std::abs(Area);
+}
+
+void debugmakers(const std::vector<nord_messages::Vector2> input, int id){
+  //debris-hull-maker (every object or debris)
+  visualization_msgs::Marker debris;
+  debris.header.frame_id ="/map";
+  debris.id=id;
+  debris.ns="detected debris";
+  debris.header.stamp = ros::Time::now();
+  debris.type = visualization_msgs::Marker::LINE_LIST;
+  debris.scale.x = 0.01f;    
+  debris.color.r = 0;//centroid(3);
+  debris.color.g = 1.0f;//centroid(4);
+  debris.color.b = 1.0f;//centroid(5);
+  debris.color.a = 1.0f;
+  debris.lifetime = ros::Duration();
+  debris.action = visualization_msgs::Marker::ADD;
+    for (uint j=0; j<input.size();j++){
+      geometry_msgs::Point twomarker;
+      twomarker.x =input[j].x;
+      twomarker.y =input[j].y;
+      twomarker.z =0.0;
+      debris.points.push_back(twomarker);
+      if (!(j ==0 || j == (input.size()-1))){
+         debris.points.push_back(twomarker);
+      }
+    }
+      geometry_msgs::Point twomarker;
+
+      twomarker.x =input[0].x;
+      twomarker.y =input[0].y;
+      twomarker.z =0.0;
+      debris.points.push_back(twomarker);
+
+      twomarker.x =input[input.size()-1].x;
+      twomarker.y =input[input.size()-1].y;
+      twomarker.z =0.0;
+      debris.points.push_back(twomarker);
+  map_pub.publish(debris);
+}
 
 map read_map(std::string filename)
 {
@@ -92,10 +145,12 @@ int main(int argc, char** argv)
         [&](const nord_messages::PoseEstimate::ConstPtr& p) {
             poses.push_back(p->stamp.toSec(),
                             std::valarray<double>({p->x.mean, p->y.mean, p->theta.mean,
-                                                  p->x.stddev, p->y.stddev, p->theta.stddev}));
-                                                          });
+                                                   p->x.stddev, p->y.stddev, p->theta.stddev,
+                                                   std::cos(p->theta.mean),
+                                                   std::sin(p->theta.mean)}));
+    });
     //publishers
-    auto map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 10);
+    map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 10);
     auto debris_pub = n.advertise< nord_messages::DebrisArray>("/nord/estimation/debris", 10);
     ros::Subscriber ugo_sub = n.subscribe<nord_messages::CoordinateArray>(
         "/nord/pointcloud/centroids", 10,
@@ -111,10 +166,15 @@ int main(int argc, char** argv)
             DebrisArray msg_array;
             std::vector<debris> temp;
             point<2> max;
+            int counter=200;
+            visualization_msgs::Marker debris;
+            debris.points.clear();
+
             for (auto& o : lm.get_objects())
             {   
-                auto temp_hull=o.get_hull();
+                auto& temp_hull=o.get_hull();
                 point<2> max;
+                point<2> diff;
                 //find max offset through wall
                 for (uint f=0; f<temp_hull.size();f++){
                     auto point1=point<2>(pose[0],pose[1]);
@@ -125,19 +185,24 @@ int main(int argc, char** argv)
                         auto point3=p.value() - point<2>(pose[0],pose[1]);
                         if (point3.length()>max.length()){
                             max=point3;
+                            diff = point2-p.value();
                         }
                     }
 
                 }
-                //move all of object to this side of the wall                
+                //move all of object to this side of the wall    
                 for (uint l=0; l<temp_hull.size();l++){
-                    temp_hull[l].x=temp_hull[l].x-max.length();
-                    temp_hull[l].y=temp_hull[l].y-max.length();
+                    temp_hull[l].x = temp_hull[l].x - diff.x();
+                    temp_hull[l].y = temp_hull[l].y - diff.y();
                 }
+                o.set_mean(o.get_mean()-diff);
+
                 //if we have seen object enough times. post it
                 auto hull_num = o.get_num_features();
-                if (hull_num > num_debris_required)
+                if (hull_num > num_debris_required && area(temp_hull)>0.001f && area(temp_hull)<0.25f)
                 {   
+                    debugmakers(temp_hull,counter);
+                    counter++;
                     nord_messages::Debris msg;
                     msg.id = o.get_id();
                     msg.x = o.get_mean().x();
