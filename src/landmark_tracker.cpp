@@ -6,6 +6,7 @@
 #include "nord_messages/Object.h"
 #include "nord_messages/LandmarksSrv.h"
 #include "nord_messages/MoneyshotSrv.h"
+#include "nord_messages/MultiLandmarksSrv.h"
 #include "nord_messages/Features.h"
 #include "landmarks.hpp"
 #include <string>
@@ -20,13 +21,30 @@ const size_t num_color_required = 8;
 
 landmarks* lm_ptr;
 
-
-
 bool landmarks_service(nord_messages::LandmarksSrv::Request& req,
             nord_messages::LandmarksSrv::Response& res)
 {
     std::cout << "entered service" << std::endl;
     res.data = lm_ptr->get_objects()[req.id].get_aggregated_features();
+    return true;
+}
+
+/** 
+* Aggregates features for the set of requested ids and send them. 
+*/
+bool multi_landmarks_service(nord_messages::MultiLandmarksSrv::Request& req,
+            nord_messages::MultiLandmarksSrv::Response& res)
+{
+    std::cout << "entered Multi Landmarks Service" << std::endl;
+    std::vector<nord_messages::Features> multiple_aggregated_features;
+    uint num_feat=0;
+    for (uint id=0; id<req.ids.size();id++) {
+        num_feat = lm_ptr->get_objects()[id].get_num_features().first;
+        for (uint feature=0;feature<num_feat;feature++) {
+            multiple_aggregated_features.push_back( lm_ptr->get_objects()[id].get_aggregated_features()[feature] );    
+        }
+    }
+    res.multifeatures = multiple_aggregated_features;
     return true;
 }
 
@@ -110,6 +128,7 @@ int main(int argc, char** argv)
 
     ros::ServiceServer srv = n.advertiseService("/nord/estimation/landmarks_service", landmarks_service);
     ros::ServiceServer moneyshotSrv = n.advertiseService("/nord/estimation/moneyshot_service", moneyshot_service);
+    ros::ServiceServer multi_service = n.advertiseService("/nord/estimation/multi_landmarks_service", multi_landmarks_service);
 
     ros::Publisher obj_pub = n.advertise<ObjectArray>("/nord/estimation/objects", 10);
 
