@@ -3,8 +3,8 @@
 #include "nord_messages/CoordinateArray.h"
 #include "nord_messages/PoseEstimate.h"
 #include "nord_messages/ObjectArray.h"
-#include "nord_messages/DebrisArray.h"
-#include "nord_messages/Debris.h"
+//#include "nord_messages/DebrisArray.h"
+//#include "nord_messages/Debris.h"
 #include "nord_messages/Object.h"
 #include "nord_messages/LandmarksSrv.h"
 #include "nord_messages/MoneyshotSrv.h"
@@ -118,7 +118,7 @@ create_points_message(std::vector<landmark> objs)
 int main(int argc, char** argv)
 {
     using nord_messages::ObjectArray;
-    using nord_messages::DebrisArray;
+    //    using nord_messages::DebrisArray;
 
 
     ros::init(argc, argv, "landmark_tracker");
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
     ros::ServiceServer multi_service = n.advertiseService("/nord/estimation/multi_landmarks_service", multi_landmarks_service);
 
     ros::Publisher obj_pub = n.advertise<ObjectArray>("/nord/estimation/objects", 10);
-    ros::Publisher object_debris_pub = n.advertise<DebrisArray>("/nord/estimation/debris",10);
+    //    ros::Publisher object_debris_pub = n.advertise<DebrisArray>("/nord/estimation/debris",10);
 
 
     ros::Subscriber pose_sub = n.subscribe<nord_messages::PoseEstimate>(
@@ -161,7 +161,7 @@ int main(int argc, char** argv)
             }
 
             ObjectArray msg_array;
-	  DebrisArray debrisArray;
+	  //	  DebrisArray debrisArray;
             std::vector<landmark> temp;
             for (auto& o : lm.get_objects())
             {
@@ -182,18 +182,18 @@ int main(int argc, char** argv)
 		    std::cout<<o.get_moneyshot().data.size()<<std::endl;
 		    std::cout<<msg.moneyshot.data.size()<<std::endl;
                     temp.push_back(o);
-		    nord_messages::Debris dmsg;
-		    dmsg.x = msg.x;
-		    dmsg.y = msg.y;
+		    //		    nord_messages::Debris dmsg;
+		    //		    dmsg.x = msg.x;
+		    //		    dmsg.y = msg.y;
 		    //		    std::cout<<dmsg<<std::endl;
-		    debrisArray.data.push_back(dmsg);
+		    //		    debrisArray.data.push_back(dmsg);
 		    
                 }
             }
             obj_pub.publish(msg_array);
             auto msg = create_points_message(temp);
             map_pub.publish(msg);
-	    object_debris_pub.publish(debrisArray);
+	  //	    object_debris_pub.publish(debrisArray);
         });
     ros::spin();
 
