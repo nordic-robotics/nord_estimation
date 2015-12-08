@@ -36,7 +36,7 @@ map read_map(std::string filename)
     return map(walls, min_x, min_y, max_x, max_y);
 }
 // ACHTUNG!!is this where this should be done?
-map maze =  read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
+map maze =  read_map(ros::package::getPath("nord_estimation") + "/data/contest_maze.txt");
 
 
 namespace
@@ -80,7 +80,7 @@ public:
         point<2> final_location;
         // If the ray collided we push the coordinate towards the robot
         if (p) {
-            final_location = p.value() - (ray.end - ray.start).normalized() * 0.02;
+            final_location = p.value() - (ray.end - ray.start).normalized() * 0.01;
         } else {
             final_location = world_location;
         }
