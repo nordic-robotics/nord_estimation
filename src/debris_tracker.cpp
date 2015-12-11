@@ -17,22 +17,22 @@
 #include "lerp_vector.hpp"
 
 const double max_distance_threshold = 0.1;
-const size_t num_debris_required = 10;
+//const size_t num_debris_required = 5;
 ros::Publisher map_pub;
 
 debris2* lm_ptr;
 
-float area(std::vector<nord_messages::Vector2> input){
-    int b=0;
-    float temp=0;
-    float Area=0;
-    for(uint a = 0; a < input.size(); a++){
-        b = ((a+1) % input.size());
-        temp = (input[a].x*input[b].y)-(input[b].x*input[a].y);
-        Area = Area + temp;
-    }
-return std::abs(Area);
-}
+// float area(std::vector<nord_messages::Vector2> input){
+//     int b=0;
+//     float temp=0;
+//     float Area=0;
+//     for(uint a = 0; a < input.size(); a++){
+//         b = ((a+1) % input.size());
+//         temp = (input[a].x*input[b].y)-(input[b].x*input[a].y);
+//         Area = Area + temp;
+//     }
+// return std::abs(Area);
+// }
 
 void debugmakers(const std::vector<nord_messages::Vector2> input, int id){
   //debris-hull-maker (every object or debris)
@@ -137,7 +137,7 @@ int main(int argc, char** argv)
     debris2 lm(max_distance_threshold);
     lm_ptr = &lm;
 
-    map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
+    map maze = read_map(ros::package::getPath("nord_planning") + "/data/contest_maze.txt");
 
     //subscribers
     ros::Subscriber pose_sub = n.subscribe<nord_messages::PoseEstimate>(
@@ -153,7 +153,7 @@ int main(int argc, char** argv)
     map_pub = n.advertise<visualization_msgs::Marker>("/nord/map", 10);
     auto debris_pub = n.advertise< nord_messages::DebrisArray>("/nord/estimation/debris", 10);
     ros::Subscriber ugo_sub = n.subscribe<nord_messages::CoordinateArray>(
-        "/nord/pointcloud/centroids", 10,
+        "/nord/pointcloud/debris_test", 10,
         [&](const nord_messages::CoordinateArray::ConstPtr& centroids) {
             if (poses.size() == 0)
                 return;
@@ -192,14 +192,14 @@ int main(int argc, char** argv)
                 }
                 //move all of object to this side of the wall    
                 for (uint l=0; l<temp_hull.size();l++){
-                    temp_hull[l].x = temp_hull[l].x - diff.x();
-                    temp_hull[l].y = temp_hull[l].y - diff.y();
+                    // temp_hull[l].x = temp_hull[l].x - diff.x();
+                    // temp_hull[l].y = temp_hull[l].y - diff.y();
                 }
-                o.set_mean(o.get_mean()-diff);
+                // o.set_mean(o.get_mean()-diff);
 
                 //if we have seen object enough times. post it
                 auto hull_num = o.get_num_features();
-                if (hull_num > num_debris_required && area(temp_hull)>0.001f && area(temp_hull)<0.25f)
+                if (hull_num > num_debris_required) // && area(temp_hull)>0.00005f && area(temp_hull)<0.2f)
                 {   
                     debugmakers(temp_hull,counter);
                     counter++;

@@ -117,7 +117,7 @@ int main(int argc, char** argv)
     ros::init(argc, argv, "particle_filter");
     ros::NodeHandle n;
     //auto start_pose = pose(1.01, 2.11, M_PI);
-    auto start_pose = pose(0.15, 0.23, 0);
+    auto start_pose = pose(0.20, 0.20, 0);
     std::array<range_settings, 7> settings_range;
     // long range IR sensors
     settings_range[0] = settings_range[1]
@@ -144,7 +144,7 @@ int main(int argc, char** argv)
                                        params["prime_p_hit"], params["prime_p_short"],
                                        params["prime_p_max"], params["prime_p_rand"]);
 
-    map maze = read_map(ros::package::getPath("nord_estimation") + "/data/small_maze.txt");
+    map maze = read_map(ros::package::getPath("nord_estimation") + "/data/contest_maze2.txt");
     forrest_filter filter(alpha, settings_range, params["imu_variance"],
                           num_particles, maze, params["uniform_fraction"],
                           params["num_primesense_rays"], start_pose);

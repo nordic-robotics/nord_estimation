@@ -5,6 +5,9 @@
 #include <valarray>
 #include "point.hpp"
 #include "argmax.hpp"
+#include "nord_messages/Vector2.h"
+
+int num_debris_required = 15;
 
 namespace
 {
@@ -203,7 +206,38 @@ namespace
         punkt4.y=ymax;
         hull.push_back(punkt4);
         return hull;
+}
+
+     std::vector<nord_messages::Vector2> haxtriangle(std::vector<nord_messages::Vector2> input, point<2> mean){
+        //change format to points
+        std::vector<point<2>> points;
+        std::transform(input.begin(), input.end(), std::back_inserter(points),
+            [&](const nord_messages::Vector2& p) {
+                return point<2>(p.x, p.y);
+            });
+        int max_distance= 0;
+        int index;
+        for(uint k=0;k<points.size();k++){
+            if ((points[k]-mean).length()>max_distance){
+                index=k;
+            }
+        }
+        input.erase(input.begin()+index);
+        return input;
     }
+
+    float area(std::vector<nord_messages::Vector2> input){
+    int b=0;
+    float temp=0;
+    float Area=0;
+    for(uint a = 0; a < input.size(); a++){
+        b = ((a+1) % input.size());
+        temp = (input[a].x*input[b].y)-(input[b].x*input[a].y);
+        Area = Area + temp;
+    }
+return std::abs(Area);
+}
+
 }
 
 
@@ -226,8 +260,11 @@ public:
                  const std::vector<nord_messages::Vector2>& hull)
     {
         data.emplace_back(world_location, robot_pose);
-        std::vector<nord_messages::Vector2> v;
-        std::transform(hull.begin(), hull.end(), std::back_inserter(v),
+
+        if (area(hull)<0.02f){
+
+        //std::vector<nord_messages::Vector2> v;
+        std::transform(hull.begin(), hull.end(), std::back_inserter(aggregated_hull),
             [&](nord_messages::Vector2 v) {
                 auto p = relative_to_world(point<2>(v.x, v.y), robot_pose);
                 v.x = p.x();
@@ -235,9 +272,24 @@ public:
                 return v;
             });
         hull_size++;
-        //auto temp = suckysquare(aggregated_hull);
-        //aggregated_hull = temp;
-        aggregated_hull=suckysquare(v);
+        auto temp = suckysquare(aggregated_hull);
+        aggregated_hull = temp;
+        }
+        else{
+            std::vector<nord_messages::Vector2> tom;
+            std::transform(hull.begin(), hull.end(), std::back_inserter(tom),
+            [&](nord_messages::Vector2 v) {
+                auto p = relative_to_world(point<2>(v.x, v.y), robot_pose);
+                v.x = p.x();
+                v.y = p.y();
+                return v;
+            });
+        hull_size=num_debris_required-1;
+        aggregated_hull = suckysquare(hull);
+
+        }
+
+        //aggregated_hull=suckysquare(v);
         float x = 0;
         float y = 0;
         for (auto& d : data)
@@ -248,7 +300,10 @@ public:
 
         mean = point<2>(x / data.size(), y / data.size());
 
+        //auto temp2=haxtriangle(aggregated_hull, mean);
+        //aggregated_hull=temp2;
         return mean;
+
     }
 
     uint get_num_features() const

@@ -36,7 +36,7 @@ map read_map(std::string filename)
     return map(walls, min_x, min_y, max_x, max_y);
 }
 // ACHTUNG!!is this where this should be done?
-map maze =  read_map(ros::package::getPath("nord_estimation") + "/data/contest_maze.txt");
+map maze =  read_map(ros::package::getPath("nord_planning") + "/data/contest_maze.txt");
 
 
 namespace
